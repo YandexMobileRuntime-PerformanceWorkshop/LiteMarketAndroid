@@ -6,6 +6,11 @@ on:
     branches: [ main ]
   workflow_dispatch: # Позволяет запустить вручную
 
+# Permissions required for creating releases
+permissions:
+  contents: write
+  actions: read
+
 # Переменные окружения
 env:
   GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4096m -Dorg.gradle.daemon=false -Dkotlin.incremental=false"
