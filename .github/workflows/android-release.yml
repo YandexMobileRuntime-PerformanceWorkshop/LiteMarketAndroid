@@ -63,15 +63,13 @@ jobs:
           # Находим правильный путь к apksigner в GitHub Actions
           APKSIGNER=$(find $ANDROID_HOME/build-tools -name "apksigner" | head -1)
           echo "🔍 Using apksigner: $APKSIGNER"
-          # Проверяем что apksigner найден и исполняемый
-          if [ ! -x "$APKSIGNER" ]; then
-            echo "❌ apksigner not found or not executable"
+          # Проверяем что apksigner найден
+          if [ ! -f "$APKSIGNER" ]; then
+            echo "❌ apksigner not found"
             echo "🔍 Available build-tools:"
             ls -la $ANDROID_HOME/build-tools/
             exit 1
           fi
-          # Делаем apksigner исполняемым (на всякий случай)
-          chmod +x "$APKSIGNER"
           # Подписываем APK
           "$APKSIGNER" sign --ks ~/.android/debug.keystore --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
           echo "✅ APK signed successfully"
