@@ -60,8 +60,20 @@ jobs:
             mkdir -p ~/.android
             keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           fi
+          # Находим правильный путь к apksigner в GitHub Actions
+          APKSIGNER=$(find $ANDROID_HOME/build-tools -name "apksigner" | head -1)
+          echo "🔍 Using apksigner: $APKSIGNER"
+          # Проверяем что apksigner найден и исполняемый
+          if [ ! -x "$APKSIGNER" ]; then
+            echo "❌ apksigner not found or not executable"
+            echo "🔍 Available build-tools:"
+            ls -la $ANDROID_HOME/build-tools/
+            exit 1
+          fi
+          # Делаем apksigner исполняемым (на всякий случай)
+          chmod +x "$APKSIGNER"
           # Подписываем APK
-          $ANDROID_HOME/build-tools/*/apksigner sign --ks ~/.android/debug.keystore --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
+          "$APKSIGNER" sign --ks ~/.android/debug.keystore --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
           echo "✅ APK signed successfully"
 
       # 8. Генерация номера версии на основе коммитов
