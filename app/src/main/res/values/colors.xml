@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Neutral colors for iOS style -->
+    <color name="purple_200">#FFE0E0E0</color>
+    <color name="purple_500">#FF757575</color>
+    <color name="purple_700">#FF424242</color>
+    <color name="teal_200">#FFE0E0E0</color>
+    <color name="teal_700">#FF757575</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    
+    <!-- Category button colors -->
+    <color name="category_button_selected">#FF333333</color>
+    <color name="category_button_unselected">#FFE6E6E6</color>
+    <color name="category_button_text_selected">#FFFFFFFF</color>
+    <color name="category_button_text_unselected">#FF000000</color>
+    
+    <!-- Product colors - точно как в iOS -->
+    <color name="product_price_color">#FF4CAF50</color>
+    <color name="background_gray">#FFF5F5F5</color>
+    <color name="search_background">#FFEEEEEE</color>
+    
+    <!-- Category colors - точно как в iOS -->
+    <color name="category_selected_bg">#FF333333</color>
+    <color name="category_unselected_bg">#FFEEEEEE</color>
+    <color name="category_text_selected">#FFFFFFFF</color>
+    <color name="category_text_unselected">#FF333333</color>
+</resources>
