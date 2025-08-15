@@ -28,6 +28,17 @@ android {
         }
     }
     
+    packaging {
+        resources {
+            // Исключаем META-INF файлы, которые могут вызывать конфликты при минификации
+            excludes += listOf(
+                "META-INF/LICENSE.md",
+                "META-INF/LICENSE-notice.md",
+                "META-INF/*.kotlin_module"
+            )
+        }
+    }
+    
     lint {
         abortOnError = false
     }
