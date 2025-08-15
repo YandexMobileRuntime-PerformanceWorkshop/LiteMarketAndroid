@@ -1,38 +1,72 @@
 package ru.yandex.speed.workshop.android.data.network
 
-import android.util.Log
+import android.content.Context
 import com.google.gson.Gson
+import timber.log.Timber
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.*
+import okhttp3.Cache
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
+import java.io.File
 import java.util.concurrent.TimeUnit
+import java.net.URLEncoder
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 /**
  * HTTP клиент на основе OkHttp (временная замена Cronet)
  */
-class HttpClient private constructor() {
+class HttpClient private constructor(private val appContext: Context) {
     
     companion object {
-        private const val TAG = "HttpClient"
+        // Timber автоматически добавляет имя класса в логи, константа TAG больше не нужна
         
         @Volatile
         private var INSTANCE: HttpClient? = null
         
-        fun getInstance(): HttpClient {
+        fun getInstance(context: Context): HttpClient {
             return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: HttpClient().also { INSTANCE = it }
+                INSTANCE ?: HttpClient(context.applicationContext).also { INSTANCE = it }
             }
         }
     }
     
-    private val okHttpClient = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
-        .build()
+    private val okHttpClient: OkHttpClient
+
+    init {
+        val cacheDir = File(appContext.cacheDir, "http_cache")
+        val cache = Cache(cacheDir, 20L * 1024 * 1024) // 20MB
+
+        okHttpClient = OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .cache(cache)
+            .addNetworkInterceptor { chain ->
+                val request = chain.request()
+                val response = chain.proceed(request)
+                if (request.method.equals("GET", ignoreCase = true)) {
+                    val cacheControl = response.header("Cache-Control")
+                    if (cacheControl.isNullOrBlank() ||
+                        cacheControl.contains("no-store", true) ||
+                        cacheControl.contains("no-cache", true) ||
+                        cacheControl.contains("must-revalidate", true)
+                    ) {
+                        response.newBuilder()
+                            .header("Cache-Control", "public, max-age=60")
+                            .build()
+                    } else {
+                        response
+                    }
+                } else {
+                    response
+                }
+            }
+            .build()
+    }
     
     private val gson = Gson()
     private val baseURL = "https://bbapkfh3cnqi1rvo0gla.containers.yandexcloud.net"  // Yandex Cloud API
@@ -52,7 +86,7 @@ class HttpClient private constructor() {
         needAuthorization: Boolean = false
     ): String = withContext(Dispatchers.IO) {
         val url = buildUrlWithParams(constructURL(path), parameters)
-        Log.d(TAG, "GET request: $url")
+        Timber.d("GET request: $url")
         val request = buildRequest("GET", url, null, headers, needAuthorization)
         executeRequest(request)
     }
@@ -68,7 +102,7 @@ class HttpClient private constructor() {
     ): String = withContext(Dispatchers.IO) {
         val url = constructURL(path)
         val jsonBody = body?.let { gson.toJson(it) }
-        Log.d(TAG, "POST request: $url, body: $jsonBody")
+        Timber.d("POST request: $url, body: $jsonBody")
         val request = buildRequest("POST", url, jsonBody, headers, needAuthorization)
         executeRequest(request)
     }
@@ -91,12 +125,13 @@ class HttpClient private constructor() {
             else -> throw IllegalArgumentException("Unsupported HTTP method: $method")
         }
         
-        Log.d(TAG, "Response: $response")
-        
+        Timber.d("Response: $response")
         return try {
-            gson.fromJson(response, responseClass)
+            withContext(Dispatchers.Default) {
+                gson.fromJson(response, responseClass)
+            }
         } catch (e: Exception) {
-            Log.e(TAG, "JSON parsing error: ${e.message}", e)
+            Timber.e(e, "JSON parsing error: ${e.message}")
             throw NetworkException.DecodingError("Failed to decode response: ${e.message}", e)
         }
     }
@@ -104,7 +139,11 @@ class HttpClient private constructor() {
     private fun buildUrlWithParams(baseUrl: String, parameters: Map<String, Any>): String {
         if (parameters.isEmpty()) return baseUrl
         
-        val params = parameters.map { "${it.key}=${it.value}" }.joinToString("&")
+        val params = parameters.map { (key, value) ->
+            val encKey = URLEncoder.encode(key, "UTF-8")
+            val encVal = URLEncoder.encode(value.toString(), "UTF-8")
+            "$encKey=$encVal"
+        }.joinToString("&")
         return "$baseUrl?$params"
     }
     
@@ -143,29 +182,37 @@ class HttpClient private constructor() {
     
     private fun executeRequest(request: Request): String {
         try {
-            Log.d(TAG, "Executing request: ${request.method} ${request.url}")
+            Timber.d("Executing request: ${request.method} ${request.url}")
             val response = okHttpClient.newCall(request).execute()
             
-            Log.d(TAG, "Response code: ${response.code}")
+            Timber.d("Response code: ${response.code}")
             
             if (!response.isSuccessful) {
                 val errorBody = response.body?.string() ?: ""
-                Log.e(TAG, "HTTP error ${response.code}: $errorBody")
+                Timber.e("HTTP error ${response.code}: $errorBody")
                 throw NetworkException.HttpError(response.code, errorBody)
             }
             
             val responseBody = response.body?.string() ?: ""
-            Log.d(TAG, "Response body: $responseBody")
+            Timber.d("Response body: $responseBody")
             return responseBody
             
         } catch (e: IOException) {
-            Log.e(TAG, "Network error: ${e.message}", e)
+            Timber.e(e, "Network error: ${e.message}")
             throw NetworkException.NetworkError("Network request failed", e)
         } catch (e: NetworkException) {
             throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Unexpected error: ${e.message}", e)
+            Timber.e(e, "Unexpected error: ${e.message}")
             throw NetworkException.NetworkError("Unexpected error", e)
         }
     }
+
+    private val retrofit = Retrofit.Builder()
+        .baseUrl(baseURL)
+        .addConverterFactory(GsonConverterFactory.create(gson))
+        .client(okHttpClient)
+        .build()
+
+    fun getApi(): ProductApi = retrofit.create(ProductApi::class.java)
 } 

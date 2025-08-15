@@ -6,36 +6,15 @@ import ru.yandex.speed.workshop.android.domain.models.ProductListResponse
 /**
  * API сервис для работы с товарами, аналог iOS ProductRoutes
  */
-class ProductService(private val httpClient: HttpClient) {
-    
-    /**
-     * Получение списка товаров с пагинацией
-     * GET /api/products?page=1&per_page=20
-     */
-    suspend fun getProductsList(page: Int = 1, perPage: Int = 20): ProductListResponse {
-        val parameters = mapOf(
-            "page" to page,
-            "per_page" to perPage
-        )
-        
-        return httpClient.request(
-            method = "GET",
-            path = "api/products",
-            parameters = parameters,
-            responseClass = ProductListResponse::class.java
-        )
-    }
+class ProductService(private val api: ProductApi) {
+    suspend fun getProductsList(page: Int = 1, perPage: Int = 20): ProductListResponse = api.getProductsList(page, perPage)
     
     /**
      * Получение деталей одного товара
      * GET /api/product/{id}
      */
     suspend fun getProductDetail(id: String): ProductDetailResponse {
-        return httpClient.request(
-            method = "GET",
-            path = "api/product/$id",
-            responseClass = ProductDetailResponse::class.java
-        )
+        return api.getProductDetail(id)
     }
     
     /**
@@ -47,39 +26,8 @@ class ProductService(private val httpClient: HttpClient) {
         page: Int = 1,
         perPage: Int = 20
     ): ProductListResponse {
-        val parameters = mapOf(
-            "q" to query,
-            "page" to page,
-            "per_page" to perPage
-        )
-        
-        return httpClient.request(
-            method = "GET",
-            path = "api/products/search",
-            parameters = parameters,
-            responseClass = ProductListResponse::class.java
-        )
+        return api.searchProducts(query, page, perPage)
     }
     
-    /**
-     * Получение товаров по категории
-     * GET /api/products/category/{category}?page=1&per_page=20
-     */
-    suspend fun getProductsByCategory(
-        category: String,
-        page: Int = 1,
-        perPage: Int = 20
-    ): ProductListResponse {
-        val parameters = mapOf(
-            "page" to page,
-            "per_page" to perPage
-        )
-        
-        return httpClient.request(
-            method = "GET",
-            path = "api/products/category/$category",
-            parameters = parameters,
-            responseClass = ProductListResponse::class.java
-        )
-    }
+    // Удалена неиспользуемая функция getProductsByCategory
 } 

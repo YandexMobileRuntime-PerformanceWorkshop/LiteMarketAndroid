@@ -1,10 +1,10 @@
 package ru.yandex.speed.workshop.android.presentation.productdetail
 
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import timber.log.Timber
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
@@ -15,12 +15,13 @@ import com.bumptech.glide.Glide
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import ru.yandex.speed.workshop.android.R
+import ru.yandex.speed.workshop.android.databinding.FragmentProductDetailBinding
+import ru.yandex.speed.workshop.android.databinding.FragmentProductDetailSkeletonBinding
 import ru.yandex.speed.workshop.android.data.network.HttpClient
 import ru.yandex.speed.workshop.android.data.network.ProductService
 import ru.yandex.speed.workshop.android.domain.models.ProductDetail
 import ru.yandex.speed.workshop.android.presentation.common.SnackbarUtils
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import android.graphics.Paint
 
@@ -29,54 +30,26 @@ class ProductDetailFragment : Fragment() {
     private lateinit var productId: String
     private var isFavorite: Boolean = false
     private var isSellerFavorite: Boolean = false
-    
-    // UI Elements
-    private lateinit var backButton: ImageView
-    private lateinit var shareButton: ImageView
-    private lateinit var favoriteButton: ImageView
-    private lateinit var galleryViewPager: ViewPager2
-    private lateinit var pageIndicator: TabLayout
-    private lateinit var similarButton: TextView
-    private lateinit var manufacturerText: TextView
-    private lateinit var productTitle: TextView
-    private lateinit var currentPriceText: TextView
-    private lateinit var oldPriceText: TextView
-    private lateinit var discountText: TextView
-    private lateinit var ratingText: TextView
-    private lateinit var reviewsCountText: TextView
-    private lateinit var sellerNameText: TextView
-    private lateinit var addToCartButton: TextView
-    private lateinit var buyNowButton: TextView
-    
-    // Promo code elements
-    private lateinit var promoDiscountText: TextView
-    private lateinit var promoCodeText: TextView
-    
-    // Seller rating element  
-    private lateinit var sellerRatingText: TextView
-    
-    // New clickable elements
-    private lateinit var copyPromoButton: ImageView
-    private lateinit var sellerFavoriteButton: ImageView
-    private lateinit var sellerDetailsButton: ImageView
-    
+
+    // ViewBinding - используем делегат для избегания null-safety проблем
+    private var _binding: FragmentProductDetailBinding? = null
+    private val binding get() = checkNotNull(_binding) { "Binding не должен использоваться после onDestroyView()" }
+    private var _skeletonBinding: FragmentProductDetailSkeletonBinding? = null
+    private val skeletonBinding get() = checkNotNull(_skeletonBinding) { "SkeletonBinding не должен использоваться после onDestroyView()" }
+
     private lateinit var productService: ProductService
-    private val fragmentScope = CoroutineScope(Dispatchers.Main)
-    
-    // Container views for content switching
+
     private lateinit var contentContainer: View
     private lateinit var skeletonContainer: View
     
-    companion object {
-        private const val TAG = "ProductDetailFragment"
-    }
+    // Timber автоматически добавляет имя класса в логи, константа TAG больше не нужна
     
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        Log.d(TAG, "onCreateView for productId: ${arguments?.getString("productId")}")
+        Timber.d("onCreateView for productId: ${arguments?.getString("productId")}")
         
         // Create container with both skeleton and content layouts
         val containerLayout = FrameLayout(requireContext())
@@ -85,29 +58,29 @@ class ProductDetailFragment : Fragment() {
             ViewGroup.LayoutParams.MATCH_PARENT
         )
         
-        // Inflate skeleton layout
-        skeletonContainer = inflater.inflate(R.layout.fragment_product_detail_skeleton, containerLayout, false)
-        containerLayout.addView(skeletonContainer)
+        // Inflate skeleton layout with ViewBinding
+        _skeletonBinding = FragmentProductDetailSkeletonBinding.inflate(inflater, containerLayout, false)
+        skeletonContainer = skeletonBinding.root
+        containerLayout.addView(skeletonBinding.root)
         
-        // Inflate content layout
-        contentContainer = inflater.inflate(R.layout.fragment_product_detail, containerLayout, false)
+        // Inflate content layout with ViewBinding
+        _binding = FragmentProductDetailBinding.inflate(inflater, containerLayout, false)
+        contentContainer = binding.root
         contentContainer.visibility = View.GONE
-        containerLayout.addView(contentContainer)
+        containerLayout.addView(binding.root)
         
         return containerLayout
     }
     
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
+
         // Get productId and favorite status from arguments
         productId = arguments?.getString("productId") ?: "unknown"
         isFavorite = arguments?.getBoolean("isFavorite", false) ?: false
-        
+
         // Show skeleton first
         showSkeleton()
-        
-        initViews(contentContainer)
         setupClickListeners()
         updateFavoriteButton() // Update favorite button with passed status
         updateSellerFavoriteButton() // Initialize seller favorite button
@@ -115,50 +88,30 @@ class ProductDetailFragment : Fragment() {
         loadProductDetail(productId)
     }
     
-    private fun initViews(view: View) {
-        backButton = view.findViewById(R.id.backButton)
-        shareButton = view.findViewById(R.id.shareButton)
-        favoriteButton = view.findViewById(R.id.favoriteButton)
-        galleryViewPager = view.findViewById(R.id.galleryViewPager)
-        pageIndicator = view.findViewById(R.id.pageIndicator)
-        similarButton = view.findViewById(R.id.similarButton)
-        manufacturerText = view.findViewById(R.id.manufacturerText)
-        productTitle = view.findViewById(R.id.productTitle)
-        currentPriceText = view.findViewById(R.id.currentPriceText)
-        oldPriceText = view.findViewById(R.id.oldPriceText)
-        discountText = view.findViewById(R.id.discountText)
-        ratingText = view.findViewById(R.id.ratingText)
-        reviewsCountText = view.findViewById(R.id.reviewsCountText)
-        sellerNameText = view.findViewById(R.id.sellerNameText)
-        addToCartButton = view.findViewById(R.id.addToCartButton)
-        buyNowButton = view.findViewById(R.id.buyNowButton)
-        
-        // Promo code elements
-        promoDiscountText = view.findViewById(R.id.promoDiscountText)
-        promoCodeText = view.findViewById(R.id.promoCodeText)
-        
-        // Seller rating element  
-        sellerRatingText = view.findViewById(R.id.sellerRatingText)
-        
-        // New clickable elements
-        copyPromoButton = view.findViewById(R.id.copyPromoButton)
-        sellerFavoriteButton = view.findViewById(R.id.sellerFavoriteButton)
-        sellerDetailsButton = view.findViewById(R.id.sellerDetailsButton)
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // Останавливаем анимацию скелетона
+        val background = skeletonBinding.skeletonContainer.background
+        if (background is android.graphics.drawable.AnimationDrawable) {
+            background.stop()
+        }
+        _binding = null
+        _skeletonBinding = null
     }
     
     private fun setupClickListeners() {
-        backButton.setOnClickListener {
-            Log.d(TAG, "Back button clicked")
+        binding.backButton.setOnClickListener {
+            Timber.d("Back button clicked")
             sendFavoriteStatusBack()
             findNavController().popBackStack()
         }
         
-        shareButton.setOnClickListener {
-            Log.d(TAG, "Share button clicked")
+        binding.shareButton.setOnClickListener {
+            Timber.d("Share button clicked")
             SnackbarUtils.showPlaceholder(requireView(), "Поделиться товаром")
         }
         
-        favoriteButton.setOnClickListener {
+        binding.favoriteButton.setOnClickListener {
             // Toggle favorite status
             isFavorite = !isFavorite
             updateFavoriteButton()
@@ -166,7 +119,7 @@ class ProductDetailFragment : Fragment() {
             // Send result back to catalog
             sendFavoriteStatusBack()
             
-            Log.d(TAG, "Favorite button clicked, new status: $isFavorite")
+            Timber.d("Favorite button clicked, new status: $isFavorite")
             val message = if (isFavorite) "Добавлено в избранное" else "Удалено из избранного"
             
             // Показываем стилизованный Snackbar с undo действием
@@ -183,32 +136,32 @@ class ProductDetailFragment : Fragment() {
             )
         }
         
-        similarButton.setOnClickListener {
-            Log.d(TAG, "Similar button clicked")
+        binding.similarButton.setOnClickListener {
+            Timber.d("Similar button clicked")
             SnackbarUtils.showPlaceholder(requireView(), "Показать похожие товары")
         }
         
-        addToCartButton.setOnClickListener {
-            Log.d(TAG, "Add to cart button clicked")
+        binding.addToCartButton.setOnClickListener {
+            Timber.d("Add to cart button clicked")
             SnackbarUtils.showSuccess(requireView(), "Добавлено в корзину", duration = 3000)
         }
         
-        buyNowButton.setOnClickListener {
-            Log.d(TAG, "Buy now button clicked")
+        binding.buyNowButton.setOnClickListener {
+            Timber.d("Buy now button clicked")
             SnackbarUtils.showPlaceholder(requireView(), "Купить сейчас")
         }
         
-        copyPromoButton.setOnClickListener {
-            Log.d(TAG, "Copy promo button clicked")
+        binding.copyPromoButton.setOnClickListener {
+            Timber.d("Copy promo button clicked")
             SnackbarUtils.showCopied(requireView(), "Промокод скопирован")
         }
         
-        sellerFavoriteButton.setOnClickListener {
+        binding.sellerFavoriteButton.setOnClickListener {
             // Toggle seller favorite status
             isSellerFavorite = !isSellerFavorite
             updateSellerFavoriteButton()
             
-            Log.d(TAG, "Seller favorite button clicked, new status: $isSellerFavorite")
+            Timber.d("Seller favorite button clicked, new status: $isSellerFavorite")
             val message = if (isSellerFavorite) "Продавец добавлен в избранное" else "Продавец удален из избранного"
             
             // Показываем стилизованный Snackbar с undo действием
@@ -224,54 +177,65 @@ class ProductDetailFragment : Fragment() {
             )
         }
         
-        sellerDetailsButton.setOnClickListener {
-            Log.d(TAG, "Seller details button clicked")
+        binding.sellerDetailsButton.setOnClickListener {
+            Timber.d("Seller details button clicked")
             SnackbarUtils.showPlaceholder(requireView(), "Открыть страницу продавца")
         }
     }
     
     private fun initProductService() {
-        val httpClient = HttpClient.getInstance()
-        productService = ProductService(httpClient)
+        val httpClient = HttpClient.getInstance(requireContext())
+        productService = ProductService(httpClient.getApi())
     }
     
     private fun loadProductDetail(productId: String) {
-        Log.d(TAG, "Loading product detail for ID: $productId")
+        Timber.d("Loading product detail for ID: $productId")
         
-        // First try to get product from catalog presenter (if available)
-        loadProductFromCatalog(productId)
-        
-        // TODO: Later implement API call for detailed product info
-        // For now use catalog data
+        // Сначала показываем данные из аргументов, если они есть
+        val catalogImages = tryGetImagesFromCatalog(productId)
+        if (catalogImages != null) {
+            // У нас есть данные из каталога - сразу их показываем
+            Timber.d("Showing catalog data from arguments first")
+            setupGallery(catalogImages)
+            hideSkeletonShowContent()
+            
+            // Затем параллельно загружаем полные данные с сервера для обновления
+            loadProductFromAPI(productId)
+        } else {
+            // Нет данных из каталога - загружаем с сервера
+            loadProductFromAPI(productId)
+        }
     }
     
-    private fun loadProductFromCatalog(productId: String) {
-        fragmentScope.launch {
+    private fun loadProductFromAPI(productId: String) {
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
-                Log.d(TAG, "Trying to load product detail from API for ID: $productId")
+                Timber.d("Trying to load product detail from API for ID: $productId")
                 
-                // Try to load from API first
+                // Загружаем с API
                 val productDetailResponse = productService.getProductDetail(productId)
                 val productDetail = productDetailResponse.product
                 
-                Log.d(TAG, "Successfully loaded product detail from API: ${productDetail.title}")
+                Timber.d("Successfully loaded product detail from API: ${productDetail.title}")
                 showProductDetail(productDetail)
                 
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to load from API: ${e.message}")
+                Timber.w("Failed to load from API: ${e.message}")
                 
-                // Try to get images from catalog data passed via arguments
-                val catalogImages = tryGetImagesFromCatalog(productId)
-                
-                if (catalogImages != null) {
-                    // We have catalog data - use it completely (title, price, images already set in tryGetImagesFromCatalog)
-                    Log.d(TAG, "Using catalog data from arguments")
-                    setupGallery(catalogImages)
-                    hideSkeletonShowContent()
-                } else {
-                    // No catalog data - use sample data for everything
-                    Log.d(TAG, "Using sample data")
-                    showSampleProductDetail(productId)
+                // Если мы еще не показали данные из каталога, проверяем их наличие
+                if (contentContainer.visibility != View.VISIBLE) {
+                    val catalogImages = tryGetImagesFromCatalog(productId)
+                    
+                    if (catalogImages != null) {
+                        // У нас есть данные из каталога - используем их
+                        Timber.d("Using catalog data from arguments as fallback")
+                        setupGallery(catalogImages)
+                        hideSkeletonShowContent()
+                    } else {
+                        // Нет данных из каталога - используем примерные данные
+                        Timber.d("Using sample data as last resort")
+                        showSampleProductDetail(productId)
+                    }
                 }
             }
         }
@@ -285,57 +249,57 @@ class ProductDetailFragment : Fragment() {
             val productImages = arguments?.getStringArrayList("productImages")
             
             if (productTitle != null && productImages != null) {
-                Log.d(TAG, "Using complete product data from arguments: $productTitle")
+                Timber.d("Using complete product data from arguments: $productTitle")
                 
                 // Update UI with ALL passed data
                 productTitle.let { 
-                    this.productTitle.text = it 
+                    binding.productTitle.text = it 
                 }
                 productPrice?.let { 
-                    this.currentPriceText.text = it 
+                    binding.currentPriceText.text = it 
                 }
                 
                 // Use real vendor/manufacturer from catalog
                 val vendor = arguments?.getString("productVendor")
                 if (!vendor.isNullOrEmpty()) {
-                    manufacturerText.text = "$vendor >"
+                    binding.manufacturerText.text = "$vendor >"
                 } else {
-                    manufacturerText.text = "Производитель >"
+                    binding.manufacturerText.text = "Производитель >"
                 }
                 
                 // Use real old price from catalog
                 val oldPrice = arguments?.getString("productOldPrice")
                 if (!oldPrice.isNullOrEmpty()) {
-                    oldPriceText.text = oldPrice
-                    oldPriceText.paintFlags = oldPriceText.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
-                    oldPriceText.visibility = View.VISIBLE
+                    binding.oldPriceText.text = oldPrice
+                    binding.oldPriceText.paintFlags = binding.oldPriceText.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
+                    binding.oldPriceText.visibility = View.VISIBLE
                 } else {
-                    oldPriceText.visibility = View.GONE
+                    binding.oldPriceText.visibility = View.GONE
                 }
                 
                 // Use real discount from catalog
                 val discountPercent = arguments?.getInt("productDiscountPercent", 0) ?: 0
                 if (discountPercent > 0) {
-                    discountText.text = "$discountPercent%"
-                    discountText.visibility = View.VISIBLE
+                    binding.discountText.text = "$discountPercent%"
+                    binding.discountText.visibility = View.VISIBLE
                 } else {
-                    discountText.visibility = View.GONE
+                    binding.discountText.visibility = View.GONE
                 }
                 
                 // Use real rating from catalog
                 val ratingScore = arguments?.getDouble("productRatingScore", 0.0) ?: 0.0
                 val ratingReviews = arguments?.getInt("productRatingReviews", 0) ?: 0
-                ratingText.text = if (ratingScore > 0) ratingScore.toString() else "4.3"
-                reviewsCountText.text = if (ratingReviews > 0) "($ratingReviews)" else "(288)"
+                binding.ratingText.text = if (ratingScore > 0) ratingScore.toString() else "4.3"
+                binding.reviewsCountText.text = if (ratingReviews > 0) "($ratingReviews)" else "(288)"
                 
                 // Use real shop name from catalog
                 val shopName = arguments?.getString("productShopName")
                 if (!shopName.isNullOrEmpty()) {
-                    sellerNameText.text = shopName
-                    sellerRatingText.text = "4.5 • Отзывы оценок" // Shop rating не передается из каталога
+                    binding.sellerNameText.text = shopName
+                    binding.sellerRatingText.text = "4.5 • Отзывы оценок" // Shop rating не передается из каталога
                 } else {
-                    sellerNameText.text = "Яндекс Фабрика"
-                    sellerRatingText.text = "4.5 • Отзывы оценок"
+                    binding.sellerNameText.text = "Яндекс Фабрика"
+                    binding.sellerRatingText.text = "4.5 • Отзывы оценок"
                 }
                 
                 // Use real promo code from catalog
@@ -345,43 +309,43 @@ class ProductDetailFragment : Fragment() {
                 val promoExpiryDate = arguments?.getString("promoExpiryDate")
                 
                 if (!promoCode.isNullOrEmpty() && !promoDiscount.isNullOrEmpty()) {
-                    promoDiscountText.text = promoDiscount
+                    binding.promoDiscountText.text = promoDiscount
                     var promoText = promoCode
                     if (!promoMinOrder.isNullOrEmpty() && !promoExpiryDate.isNullOrEmpty()) {
                         promoText = "$promoCode\n$promoMinOrder • $promoExpiryDate"
                     }
-                    promoCodeText.text = promoText
-                    promoDiscountText.visibility = View.VISIBLE
-                    promoCodeText.visibility = View.VISIBLE
+                    binding.promoCodeText.text = promoText
+                    binding.promoDiscountText.visibility = View.VISIBLE
+                    binding.promoCodeText.visibility = View.VISIBLE
                 } else {
-                    promoDiscountText.visibility = View.GONE
-                    promoCodeText.visibility = View.GONE
+                    binding.promoDiscountText.visibility = View.GONE
+                    binding.promoCodeText.visibility = View.GONE
                 }
                 
                 return productImages
             }
             
-            Log.d(TAG, "No product data in arguments, using fallback")
+            Timber.d("No product data in arguments, using fallback")
             return null
             
         } catch (e: Exception) {
-            Log.e(TAG, "Error accessing catalog data: ${e.message}", e)
+            Timber.e(e, "Error accessing catalog data: ${e.message}")
             null
         }
     }
     
     private fun showSampleProductDetail(productId: String) {
-        Log.d(TAG, "Showing sample product detail for ID: $productId")
+        Timber.d("Showing sample product detail for ID: $productId")
         
-        manufacturerText.text = "Производитель >"
-        productTitle.text = "Образец товара"
-        currentPriceText.text = "3576 ₽"
-        oldPriceText.text = "3612 ₽"
-        oldPriceText.paintFlags = oldPriceText.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
-        discountText.text = "1%"
-        ratingText.text = "4.3"
-        reviewsCountText.text = "(288)"
-        sellerNameText.text = "Яндекс Фабрика"
+        binding.manufacturerText.text = "Производитель >"
+        binding.productTitle.text = "Образец товара"
+        binding.currentPriceText.text = "3576 ₽"
+        binding.oldPriceText.text = "3612 ₽"
+        binding.oldPriceText.paintFlags = binding.oldPriceText.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
+        binding.discountText.text = "1%"
+        binding.ratingText.text = "4.3"
+        binding.reviewsCountText.text = "(288)"
+        binding.sellerNameText.text = "Яндекс Фабрика"
         
         // Use sample images for the power tool
         val productImages = listOf(
@@ -390,7 +354,7 @@ class ProductDetailFragment : Fragment() {
             "https://avatars.mds.yandex.net/get-mpic/5288399/img_id8662451988765623138.jpeg/orig"
         )
         
-        Log.d(TAG, "Setting up gallery with ${productImages.size} sample images")
+        Timber.d("Setting up gallery with ${productImages.size} sample images")
         setupGallery(productImages)
         
         // Hide skeleton and show content
@@ -398,80 +362,80 @@ class ProductDetailFragment : Fragment() {
     }
     
     private fun showProductDetail(productDetail: ProductDetail) {
-        Log.d(TAG, "Showing product detail: ${productDetail.title}")
+        Timber.d("Showing product detail: ${productDetail.title}")
         
-        manufacturerText.text = "${productDetail.manufacturer.name} >"
-        productTitle.text = productDetail.title
-        currentPriceText.text = productDetail.price.currentPrice
+        binding.manufacturerText.text = "${productDetail.manufacturer.name} >"
+        binding.productTitle.text = productDetail.title
+        binding.currentPriceText.text = productDetail.price.currentPrice
         
         // Handle old price (может быть null или пустой)
         val oldPrice = productDetail.price.oldPrice
-        Log.d(TAG, "Old price from API: '$oldPrice'")
+        Timber.d("Old price from API: '$oldPrice'")
         if (!oldPrice.isNullOrEmpty() && oldPrice.isNotBlank()) {
-            oldPriceText.text = oldPrice
-            oldPriceText.paintFlags = oldPriceText.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
-            oldPriceText.visibility = View.VISIBLE
+            binding.oldPriceText.text = oldPrice
+            binding.oldPriceText.paintFlags = binding.oldPriceText.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
+            binding.oldPriceText.visibility = View.VISIBLE
         } else {
             // Показываем sample старую цену для демонстрации
-            oldPriceText.text = "3612 ₽"
-            oldPriceText.paintFlags = oldPriceText.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
-            oldPriceText.visibility = View.VISIBLE
+            binding.oldPriceText.text = "3612 ₽"
+            binding.oldPriceText.paintFlags = binding.oldPriceText.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
+            binding.oldPriceText.visibility = View.VISIBLE
         }
         
         // Handle discount (может быть null)
         val discount = productDetail.price.discountPercentage
-        Log.d(TAG, "Discount from API: '$discount'")
+        Timber.d("Discount from API: '$discount'")
         if (!discount.isNullOrEmpty() && discount.isNotBlank()) {
             // Добавляем % если его нет
             val formattedDiscount = if (discount.endsWith("%")) discount else "$discount%"
-            discountText.text = formattedDiscount
-            discountText.visibility = View.VISIBLE
+            binding.discountText.text = formattedDiscount
+            binding.discountText.visibility = View.VISIBLE
         } else {
             // Показываем sample скидку для демонстрации
-            discountText.text = "1%"
-            discountText.visibility = View.VISIBLE
+            binding.discountText.text = "1%"
+            binding.discountText.visibility = View.VISIBLE
         }
         
         // Rating с проверкой на nullable как в iOS
         val ratingScore = productDetail.rating.score
-        ratingText.text = ratingScore?.takeIf { it > 0 }?.toString() ?: "4.3"
+        binding.ratingText.text = ratingScore?.takeIf { it > 0 }?.toString() ?: "4.3"
         
         val reviewsCount = productDetail.rating.reviewsCount
-        reviewsCountText.text = reviewsCount?.takeIf { it > 0 }?.let { "($it)" } ?: "(288)"
+        binding.reviewsCountText.text = reviewsCount?.takeIf { it > 0 }?.let { "($it)" } ?: "(288)"
         
         // Seller data with fallbacks
         val sellerName = productDetail.seller.name
-        Log.d(TAG, "Seller name from API: '$sellerName'")
+        Timber.d("Seller name from API: '$sellerName'")
         if (sellerName.isNotEmpty()) {
-            sellerNameText.text = sellerName
+            binding.sellerNameText.text = sellerName
         } else {
-            sellerNameText.text = "Яндекс Фабрика"
+            binding.sellerNameText.text = "Яндекс Фабрика"
         }
         
         val sellerRating = productDetail.seller.rating
         val sellerReviews = productDetail.seller.reviewsCount
-        Log.d(TAG, "Seller rating from API: '$sellerRating', reviews: '$sellerReviews'")
+        Timber.d("Seller rating from API: '$sellerRating', reviews: '$sellerReviews'")
         if (sellerRating > 0 && sellerReviews.isNotEmpty()) {
-            sellerRatingText.text = "$sellerRating • $sellerReviews"
+            binding.sellerRatingText.text = "$sellerRating • $sellerReviews"
         } else {
-            sellerRatingText.text = "4.5 • Отзывы оценок"
+            binding.sellerRatingText.text = "4.5 • Отзывы оценок"
         }
         
         // Handle promo code
         productDetail.promoCode?.let { promo ->
-            promoDiscountText.text = promo.discount
-            promoCodeText.text = "Промокод ${promo.code}"
+            binding.promoDiscountText.text = promo.discount
+            binding.promoCodeText.text = "Промокод ${promo.code}"
             if (promo.minOrder != null && promo.expiryDate != null) {
-                promoCodeText.text = "Промокод ${promo.code}\n${promo.minOrder} • ${promo.expiryDate}"
+                binding.promoCodeText.text = "Промокод ${promo.code}\n${promo.minOrder} • ${promo.expiryDate}"
             }
-            promoDiscountText.visibility = View.VISIBLE
-            promoCodeText.visibility = View.VISIBLE
+            binding.promoDiscountText.visibility = View.VISIBLE
+            binding.promoCodeText.visibility = View.VISIBLE
         } ?: run {
             // Show sample promo code for demonstration
-            promoDiscountText.text = "-150 ₽"
-            promoCodeText.text = "Промокод WOW500\nЗаказ от 3000₽ • до 20.09"
-            promoDiscountText.visibility = View.VISIBLE
-            promoCodeText.visibility = View.VISIBLE
+            binding.promoDiscountText.text = "-150 ₽"
+            binding.promoCodeText.text = "Промокод WOW500\nЗаказ от 3000₽ • до 20.09"
+            binding.promoDiscountText.visibility = View.VISIBLE
+            binding.promoCodeText.visibility = View.VISIBLE
         }
         
         // Setup gallery
@@ -482,7 +446,7 @@ class ProductDetailFragment : Fragment() {
     }
     
     private fun setupGallery(imageUrls: List<String>) {
-        Log.d(TAG, "Setting up gallery with ${imageUrls.size} images")
+        Timber.d("Setting up gallery with ${imageUrls.size} images")
         
         // Always setup gallery, even if empty
         val imagesToShow = if (imageUrls.isNotEmpty()) {
@@ -492,32 +456,79 @@ class ProductDetailFragment : Fragment() {
             listOf("placeholder")
         }
         
-        val adapter = ProductGalleryAdapter(imagesToShow)
-        galleryViewPager.adapter = adapter
+        // Gallery adapter
+        class GalleryAdapter(private val imageUrls: List<String>) : 
+            androidx.recyclerview.widget.RecyclerView.Adapter<GalleryAdapter.GalleryViewHolder>() {
+            
+            override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): GalleryViewHolder {
+                val imageView = ImageView(parent.context).apply {
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    adjustViewBounds = true
+                }
+                return GalleryViewHolder(imageView)
+            }
+            
+            override fun getItemCount() = imageUrls.size
+            
+            override fun onBindViewHolder(holder: GalleryViewHolder, position: Int) {
+                val imageUrl = imageUrls[position]
+                
+                if (imageUrl == "placeholder") {
+                    holder.imageView.setImageResource(R.drawable.ic_placeholder_large)
+                } else {
+                    Glide.with(holder.imageView)
+                        .load(imageUrl)
+                        .placeholder(R.drawable.ic_placeholder_large)
+                        .error(R.drawable.ic_placeholder_large)
+                        .fitCenter()
+                        .into(holder.imageView)
+                }
+            }
+            
+            inner class GalleryViewHolder(val imageView: ImageView) : 
+                androidx.recyclerview.widget.RecyclerView.ViewHolder(imageView)
+        }
+        
+        val adapter = GalleryAdapter(imagesToShow)
+        binding.galleryViewPager.adapter = adapter
         
         // Setup page indicator
-        TabLayoutMediator(pageIndicator, galleryViewPager) { _, _ ->
+        TabLayoutMediator(binding.pageIndicator, binding.galleryViewPager) { _, _ ->
             // Empty implementation - just shows dots
         }.attach()
         
-        Log.d(TAG, "Gallery setup complete with ${imagesToShow.size} images")
+        Timber.d("Gallery setup complete with ${imagesToShow.size} images")
     }
     
     private fun showSkeleton() {
-        Log.d(TAG, "Showing skeleton loading state")
+        Timber.d("Showing skeleton loading state")
         skeletonContainer.visibility = View.VISIBLE
         contentContainer.visibility = View.GONE
         
-        // Запускаем анимацию переливания для скелетона
-        val animation = android.view.animation.AnimationUtils.loadAnimation(
-            requireContext(), 
-            R.anim.skeleton_shimmer
-        )
-        skeletonContainer.startAnimation(animation)
+        // Используем drawable animation вместо view animation для лучшей производительности
+        val background = skeletonBinding.skeletonContainer.background
+        if (background is android.graphics.drawable.AnimationDrawable) {
+            background.start()
+        } else {
+            // Устанавливаем анимированный фон
+            val animatedBackground = requireContext().getDrawable(R.drawable.skeleton_shimmer_animation) as? android.graphics.drawable.AnimationDrawable
+            skeletonBinding.skeletonContainer.background = animatedBackground
+            animatedBackground?.start()
+        }
     }
     
     private fun hideSkeletonShowContent() {
-        Log.d(TAG, "Hiding skeleton, showing content")
+        Timber.d("Hiding skeleton, showing content")
+        
+        // Останавливаем анимацию скелетона
+        val background = skeletonBinding.skeletonContainer.background
+        if (background is android.graphics.drawable.AnimationDrawable) {
+            background.stop()
+        }
         
         // Animate transition for better UX
         skeletonContainer.animate()
@@ -534,7 +545,7 @@ class ProductDetailFragment : Fragment() {
             }
             .start()
     }
-    
+
     private fun sendFavoriteStatusBack() {
         // Send favorite status back to catalog fragment
         val result = Bundle().apply {
@@ -551,7 +562,7 @@ class ProductDetailFragment : Fragment() {
         } else {
             R.drawable.ic_heart
         }
-        favoriteButton.setImageResource(favoriteIcon)
+        binding.favoriteButton.setImageResource(favoriteIcon)
         
         // Set favorite icon color
         val favoriteColor = if (isFavorite) {
@@ -559,7 +570,7 @@ class ProductDetailFragment : Fragment() {
         } else {
             android.R.color.darker_gray
         }
-        favoriteButton.imageTintList = android.content.res.ColorStateList.valueOf(
+        binding.favoriteButton.imageTintList = android.content.res.ColorStateList.valueOf(
             requireContext().getColor(favoriteColor)
         )
     }
@@ -571,7 +582,7 @@ class ProductDetailFragment : Fragment() {
         } else {
             R.drawable.ic_heart
         }
-        sellerFavoriteButton.setImageResource(favoriteIcon)
+        binding.sellerFavoriteButton.setImageResource(favoriteIcon)
         
         // Set favorite icon color
         val favoriteColor = if (isSellerFavorite) {
@@ -579,50 +590,8 @@ class ProductDetailFragment : Fragment() {
         } else {
             android.R.color.darker_gray
         }
-        sellerFavoriteButton.imageTintList = android.content.res.ColorStateList.valueOf(
+        binding.sellerFavoriteButton.imageTintList = android.content.res.ColorStateList.valueOf(
             requireContext().getColor(favoriteColor)
         )
     }
 }
-
-// Simple adapter for product gallery
-class ProductGalleryAdapter(private val imageUrls: List<String>) : 
-    androidx.recyclerview.widget.RecyclerView.Adapter<ProductGalleryAdapter.ImageViewHolder>() {
-    
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ImageViewHolder {
-        val imageView = ImageView(parent.context).apply {
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-            scaleType = ImageView.ScaleType.FIT_CENTER // Показывать всю картинку целиком
-            adjustViewBounds = true // Сохранять пропорции
-        }
-        return ImageViewHolder(imageView)
-    }
-    
-    override fun onBindViewHolder(holder: ImageViewHolder, position: Int) {
-        val imageUrl = imageUrls[position]
-        
-        if (imageUrl == "placeholder") {
-            // Show placeholder drawable
-            holder.imageView.setImageResource(R.drawable.ic_placeholder_large)
-            holder.imageView.scaleType = ImageView.ScaleType.FIT_CENTER
-        } else {
-            // Load actual image from network - показываем всю картинку целиком
-            Log.d("ProductGallery", "Loading image: $imageUrl")
-            holder.imageView.scaleType = ImageView.ScaleType.FIT_CENTER
-            Glide.with(holder.imageView)
-                .load(imageUrl)
-                .placeholder(R.drawable.ic_placeholder_large)
-                .error(R.drawable.ic_placeholder_large)
-                .fitCenter() // Показывать всю картинку без обрезки
-                .into(holder.imageView)
-        }
-    }
-    
-    override fun getItemCount() = imageUrls.size
-    
-    class ImageViewHolder(val imageView: ImageView) : 
-        androidx.recyclerview.widget.RecyclerView.ViewHolder(imageView)
-} 
