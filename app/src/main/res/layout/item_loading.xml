@@ -3,18 +3,31 @@
     android:layout_width="match_parent"
     android:layout_height="80dp"
     android:gravity="center"
+    android:background="@color/background_gray"
     android:orientation="horizontal">
 
     <ProgressBar
+        android:id="@+id/progressBar"
         android:layout_width="32dp"
         android:layout_height="32dp"
         android:indeterminate="true" />
 
     <TextView
+        android:id="@+id/messageText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:text="Загрузка..."
+        android:text="@string/loading"
+        android:textColor="@color/purple_700"
         android:textSize="16sp" />
+
+    <Button
+        android:id="@+id/retryButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:textColor="@color/white"
+        android:backgroundTint="@color/purple_500"
+        android:text="@string/retry" />
 
 </LinearLayout> 

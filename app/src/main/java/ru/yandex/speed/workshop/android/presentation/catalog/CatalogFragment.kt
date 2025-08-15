@@ -3,10 +3,10 @@ package ru.yandex.speed.workshop.android.presentation.catalog
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import timber.log.Timber
 import android.widget.*
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
@@ -14,16 +14,24 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import ru.yandex.speed.workshop.android.R
 import ru.yandex.speed.workshop.android.data.network.HttpClient
 import ru.yandex.speed.workshop.android.data.network.ProductService
 import ru.yandex.speed.workshop.android.domain.models.Product
 import ru.yandex.speed.workshop.android.presentation.common.SnackbarUtils
+import androidx.fragment.app.viewModels
 
 /**
  * Fragment каталога товаров (аналог iOS ProductsViewController)
  */
-class CatalogFragment : Fragment(), CatalogContract.View {
+class CatalogFragment : Fragment() {
     
     companion object {
         private const val TAG = "CatalogFragment"
@@ -33,65 +41,57 @@ class CatalogFragment : Fragment(), CatalogContract.View {
         }
     }
     
-    // UI elements
     private lateinit var searchEditText: EditText
     private lateinit var categoriesRecyclerView: RecyclerView
     private lateinit var productsRecyclerView: RecyclerView
     private lateinit var swipeRefreshLayout: SwipeRefreshLayout
     private lateinit var loadingProgressBar: ProgressBar
     private lateinit var errorTextView: TextView
-    
-    // Adapters
-    private lateinit var productAdapter: ProductAdapter
+    private lateinit var skeletonView: ProductsListSkeletonView
+    private lateinit var productAdapter: ProductPagingAdapter
     private lateinit var categoryAdapter: CategoryAdapter
-    
-    // Presenter
-    private lateinit var presenter: CatalogContract.Presenter
-    
-    // Prevent multiple pagination calls
-    private var lastPaginationTrigger = 0L
-    private val PAGINATION_THROTTLE_MS = 1000L // 1 second between pagination calls
-    
-    // Categories (same as iOS version)
+
+    private var searchJob: Job? = null
     private val categories = listOf("Для вас", "Ниже рынка", "Ultima", "Одежда", "Дом")
+    
+    private val viewModel by viewModels<CatalogViewModel> { CatalogViewModelFactory(requireContext()) }
     
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        Log.d(TAG, "onCreateView called")
+        Timber.d("onCreateView called")
         return inflater.inflate(R.layout.fragment_catalog, container, false)
     }
     
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        Log.d(TAG, "onViewCreated called")
+        Timber.d("onViewCreated called")
         
         initViews(view)
         initPresenter()
         setupRecyclerViews()
         setupSearchBar()
         setupSwipeRefresh()
-        setupScrollListener()
         setupFavoriteResultListener()
-        setupTestPagination() // Temporary for testing
-        
-        // Load data only if needed (singleton presenter may already have data)
-        Log.d(TAG, "Checking if data needs to be loaded")
-        if (!presenter.hasData()) {
-            Log.d(TAG, "No data found, starting initial load with skeletons")
-            showSkeletons()
-            presenter.loadProducts(refresh = true)
-        } else {
-            Log.d(TAG, "Data already exists in singleton presenter")
-            // Data will be restored automatically in attachView
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.productsFlow.collectLatest { pagingData ->
+                    productAdapter.submitData(pagingData)
+                }
+            }
+        }
+        setupLoadStateListener()
+        productsRecyclerView.apply {
+            setRecycledViewPool(recycledViewPool)
+            setItemViewCacheSize(12)
         }
     }
     
     override fun onDestroyView() {
         super.onDestroyView()
-        presenter.detachView()
     }
     
     private fun initViews(view: View) {
@@ -101,57 +101,55 @@ class CatalogFragment : Fragment(), CatalogContract.View {
         swipeRefreshLayout = view.findViewById(R.id.swipeRefreshLayout)
         loadingProgressBar = view.findViewById(R.id.loadingProgressBar)
         errorTextView = view.findViewById(R.id.errorTextView)
+        skeletonView = view.findViewById(R.id.skeletonView)
     }
     
     private fun initPresenter() {
-        val httpClient = HttpClient.getInstance()
-        val productService = ProductService(httpClient)
-        presenter = CatalogPresenter.getInstance(productService)
-        presenter.attachView(this)
+        // Оставлено для обратной совместимости
+        // Основная логика теперь в ViewModel
     }
     
     private fun setupRecyclerViews() {
-        // Setup products RecyclerView
-        productAdapter = ProductAdapter(
+
+        productAdapter = ProductPagingAdapter(
             onProductClick = { product ->
-                presenter.onProductClicked(product)
+
+                viewModel.onProductClicked(product) { productId ->
+                    navigateToProductDetail(productId)
+                }
             },
             onFavoriteClick = { product ->
                 val wasAdded = product.isFavorite
-                presenter.onFavoriteClicked(product)
+
+                viewModel.onFavoriteClicked(product)
                 val message = if (wasAdded) "Добавлено в избранное" else "Удалено из избранного"
                 
-                // Показываем стилизованный Snackbar с undo действием
+
                 SnackbarUtils.showFavoriteAction(
                     view = requireView(),
                     message = message,
                     isAdded = wasAdded,
                     undoAction = {
-                        // Undo действие - возвращаем статус обратно
+
                         product.isFavorite = !product.isFavorite
-                        presenter.updateProductFavoriteStatus(product.id, product.isFavorite)
+                        viewModel.updateProductFavoriteStatus(product.id, product.isFavorite)
                     }
                 )
             }
         )
         
         val gridLayoutManager = GridLayoutManager(requireContext(), 2)
-        gridLayoutManager.spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
-            override fun getSpanSize(position: Int): Int {
-                return when (productAdapter.getItemViewType(position)) {
-                    0 -> 1 // Product item takes 1 span
-                    1 -> 2 // Loading item takes full width (2 spans)
-                    else -> 1
-                }
-            }
-        }
         
         productsRecyclerView.apply {
             layoutManager = gridLayoutManager
-            adapter = productAdapter
+            adapter = productAdapter.withLoadStateFooter(
+                footer = ProductsLoadStateAdapter { productAdapter.retry() }
+            )
+            itemAnimator = null
         }
+        productsRecyclerView.setHasFixedSize(true)
         
-        // Setup categories RecyclerView
+
         categoryAdapter = CategoryAdapter(categories) { category, position ->
             categoryAdapter.setSelectedPosition(position)
             // TODO: Implement category filtering
@@ -170,77 +168,30 @@ class CatalogFragment : Fragment(), CatalogContract.View {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
             
             override fun afterTextChanged(s: Editable?) {
-                presenter.searchProducts(s?.toString() ?: "")
+                val query = s?.toString()?.trim() ?: ""
+                searchJob?.cancel()
+                searchJob = viewLifecycleOwner.lifecycleScope.launch {
+                    delay(300)
+                    viewModel.setQuery(query)
+                }
             }
         })
     }
     
     private fun setupSwipeRefresh() {
         swipeRefreshLayout.setOnRefreshListener {
-            Log.d(TAG, "SwipeRefresh triggered")
-            presenter.onRefresh()
+            Timber.d("SwipeRefresh triggered")
+            productAdapter.refresh()
         }
     }
     
-    private fun setupScrollListener() {
-        productsRecyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                super.onScrolled(recyclerView, dx, dy)
-                
-                val layoutManager = recyclerView.layoutManager as GridLayoutManager
-                val totalItemCount = layoutManager.itemCount
-                val lastVisibleItemPosition = layoutManager.findLastVisibleItemPosition()
-                val visibleItemCount = layoutManager.childCount
-                val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
-                
-                // Don't trigger pagination if no products loaded yet
-                val currentProducts = getCurrentProductsList()
-                if (currentProducts.isEmpty()) {
-                    return
-                }
-                
-                // Trigger pagination when approaching end of list (GridLayoutManager specific)
-                val isNearEnd = (firstVisibleItemPosition + visibleItemCount) >= (totalItemCount - 6)
-                val isAtEnd = lastVisibleItemPosition >= totalItemCount - 4
-                val shouldTrigger = isNearEnd || isAtEnd
-                
-                if (shouldTrigger) {
-                    // Throttle pagination to prevent multiple rapid API calls
-                    val now = System.currentTimeMillis()
-                    if (now - lastPaginationTrigger >= PAGINATION_THROTTLE_MS) {
-                        lastPaginationTrigger = now
-                        Log.d(TAG, "Triggering pagination")
-                        presenter.loadNextPageIfNeeded()
-                    } else {
-                        Log.d(TAG, "Pagination throttled")
-                    }
-                }
-            }
-        })
-    }
+
     
-    // MARK: - CatalogContract.View Implementation
+
     
-    override fun showProducts(products: List<Product>) {
-        Log.d(TAG, "showProducts called with ${products.size} products")
-        Log.d(TAG, "First 3 products: ${products.take(3).map { "${it.id}: ${it.title.take(20)}" }}")
-        hideError()
-        hideSkeletons()
-        productAdapter.updateProducts(products, false)
-        Log.d(TAG, "showProducts completed, adapter should have ${products.size} items")
-    }
-    
-    override fun addProducts(products: List<Product>) {
-        Log.d(TAG, "addProducts called with ${products.size} new products")
-        hideError()
-        productAdapter.addProducts(products, false)
-        Log.d(TAG, "addProducts completed")
-    }
-    
-    override fun showLoading(isLoading: Boolean) {
-        Log.d(TAG, "showLoading: $isLoading")
+    fun showLoading(isLoading: Boolean) {
+        Timber.d("showLoading: $isLoading")
         if (isLoading) {
-            // Show loading spinner (for refresh when we already have data)
             loadingProgressBar.visibility = View.VISIBLE
             hideError()
         } else {
@@ -251,19 +202,8 @@ class CatalogFragment : Fragment(), CatalogContract.View {
         }
     }
     
-    override fun showPaginationLoading(isLoading: Boolean) {
-        Log.d(TAG, "showPaginationLoading: $isLoading")
-        val currentProducts = getCurrentProductsList()
-        if (currentProducts.isNotEmpty()) {
-            Log.d(TAG, "Updating pagination with ${currentProducts.size} products, loading=$isLoading")
-            productAdapter.updateProducts(currentProducts, isLoading)
-        } else {
-            Log.d(TAG, "Skipping pagination update - no products available")
-        }
-    }
-    
-    override fun showError(message: String) {
-        Log.e(TAG, "showError: $message")
+    fun showError(message: String) {
+        Timber.e("showError: $message")
         loadingProgressBar.visibility = View.GONE
         if (swipeRefreshLayout.isRefreshing) {
             swipeRefreshLayout.isRefreshing = false
@@ -273,8 +213,8 @@ class CatalogFragment : Fragment(), CatalogContract.View {
         errorTextView.visibility = View.VISIBLE
     }
     
-    override fun navigateToProductDetail(productId: String) {
-        Log.d(TAG, "Navigating to product detail: $productId")
+    fun navigateToProductDetail(productId: String) {
+        Timber.d("Navigating to product detail: $productId")
         try {
             // Pass existing product data to avoid re-fetching if available
             val product = getCurrentProductsList().find { it.id == productId }
@@ -308,15 +248,15 @@ class CatalogFragment : Fragment(), CatalogContract.View {
                     if (it.pictureUrls.isNotEmpty()) {
                         putStringArrayList("productImages", ArrayList(it.pictureUrls))
                     }
-                    Log.d(TAG, "Passing complete product data: ${it.title}, old_price=${it.oldPrice}, shop=${it.shopName}")
+                    Timber.d("Passing complete product data: ${it.title}, old_price=${it.oldPrice}, shop=${it.shopName}")
                 } ?: run {
-                    Log.w(TAG, "Product not found in current list for ID: $productId")
+                    Timber.w("Product not found in current list for ID: $productId")
                 }
             }
             
             findNavController().navigate(R.id.productDetailFragment, bundle)
         } catch (e: Exception) {
-            Log.e(TAG, "Navigation error: ${e.message}", e)
+            Timber.e(e, "Navigation error: ${e.message}")
             // Navigation errors are critical and should be logged, not shown to user
         }
     }
@@ -325,16 +265,17 @@ class CatalogFragment : Fragment(), CatalogContract.View {
         errorTextView.visibility = View.GONE
     }
     
-    private fun showSkeletons() {
-        Log.d(TAG, "Showing skeleton placeholders")
+    private fun showSkeletons() { 
         loadingProgressBar.visibility = View.GONE
-        productAdapter.showSkeletons(6) // Show 6 skeleton items
+        swipeRefreshLayout.visibility = View.GONE
+        skeletonView.visibility = View.VISIBLE
+        skeletonView.showSkeletons(6) // Показываем 6 скелетонов
     }
     
-    private fun hideSkeletons() {
-        Log.d(TAG, "hideSkeletons called - DON'T call updateProducts here!")
-        // Skeletons will be automatically replaced when real data is submitted to adapter
-        // No need to explicitly hide - just clear the skeleton list
+    private fun hideSkeletons() { 
+        skeletonView.hideSkeletons()
+        skeletonView.visibility = View.GONE
+        swipeRefreshLayout.visibility = View.VISIBLE
     }
     
     private fun setupFavoriteResultListener() {
@@ -344,38 +285,54 @@ class CatalogFragment : Fragment(), CatalogContract.View {
                 val productId = result.getString("productId")
                 val isFavorite = result.getBoolean("isFavorite", false)
                 
-                Log.d(TAG, "Received favorite result: productId=$productId, isFavorite=$isFavorite")
+                Timber.d("Received favorite result: productId=$productId, isFavorite=$isFavorite")
                 
-                // Update product in presenter's data
-                presenter.updateProductFavoriteStatus(productId, isFavorite)
+                // Update product in ViewModel's data
+                viewModel.updateProductFavoriteStatus(productId, isFavorite)
                 
                 // Clear the result to prevent re-triggering
                 findNavController().currentBackStackEntry?.savedStateHandle?.remove<Bundle>("favorite_result")
             }
     }
     
-        private fun getCurrentProductsList(): List<Product> {
-        val currentItems = productAdapter.currentList
-        val products = currentItems.filterIsInstance<ProductAdapter.Item.ProductItem>()
-            .map { it.product }
-        Log.d(TAG, "getCurrentProductsList: ${currentItems.size} items total, ${products.size} products")
-        return products
-    }
+        private fun getCurrentProductsList(): List<Product> = productAdapter.snapshot().items
     
-    // Temporary method for testing pagination
-    private fun setupTestPagination() {
-        var lastClickTime = 0L
-        
-        // Add a double tap listener to the search bar for testing pagination
-        searchEditText.setOnClickListener {
-            val currentTime = System.currentTimeMillis()
-            if (currentTime - lastClickTime < 500) { // Double tap within 500ms
-                Log.d(TAG, "🧪 MANUAL PAGINATION TEST - Double tap detected, forcing load next page")
-                presenter.loadNextPageIfNeeded()
+
+
+
+    private fun setupLoadStateListener() {
+        productAdapter.addLoadStateListener { loadStates ->
+            val isRefreshing = loadStates.refresh is androidx.paging.LoadState.Loading
+            
+
+            if (isRefreshing) {
+                if (productAdapter.itemCount == 0) {
+                    showSkeletons()
+                } else {
+                    loadingProgressBar.visibility = View.VISIBLE
+                }
+            } else {
+                hideSkeletons()
+                loadingProgressBar.visibility = View.GONE
             }
-            lastClickTime = currentTime
+            
+
+            if (swipeRefreshLayout.isRefreshing && !isRefreshing) {
+                swipeRefreshLayout.isRefreshing = false
+            }
+
+
+            val errorState = loadStates.refresh as? androidx.paging.LoadState.Error
+                ?: loadStates.append as? androidx.paging.LoadState.Error
+                ?: loadStates.prepend as? androidx.paging.LoadState.Error
+            errorState?.let {
+                hideSkeletons()
+                showError(it.error.message ?: "Ошибка загрузки")
+            }
         }
     }
+
+    private val recycledViewPool = RecyclerView.RecycledViewPool()
 
  
 } 

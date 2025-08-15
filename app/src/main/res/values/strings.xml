@@ -2,4 +2,7 @@
 <resources>
     <string name="app_name">SpeedWorkshopAndroid</string>
     <string name="title_home">Каталог</string>
+    <string name="loading">Загрузка...</string>
+    <string name="retry">Повторить</string>
+    <string name="loading_error">Ошибка загрузки</string>
 </resources>
