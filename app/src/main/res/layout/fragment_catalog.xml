@@ -30,7 +30,7 @@
             android:layout_width="20dp"
             android:layout_height="20dp"
             android:src="@drawable/ic_search"
-            android:tint="@android:color/darker_gray" />
+            app:tint="@android:color/darker_gray" />
 
         <EditText
             android:id="@+id/searchEditText"
@@ -51,7 +51,7 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:src="@drawable/ic_filter"
-            android:tint="@android:color/darker_gray" />
+            app:tint="@android:color/darker_gray" />
 
     </LinearLayout>
 
