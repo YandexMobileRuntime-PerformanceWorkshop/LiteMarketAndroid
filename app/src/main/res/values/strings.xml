@@ -6,4 +6,39 @@
     <string name="retry">Повторить</string>
     <string name="loading_error">Ошибка загрузки</string>
     <string name="error_loading_products">Ошибка загрузки товаров</string>
+    
+    <!-- Значения по умолчанию -->
+    <string name="default_rating">4.3</string>
+    <string name="default_reviews_count">(288)</string>
+    <string name="default_seller_rating">4.5 • Отзывы оценок</string>
+    <string name="unknown_manufacturer">Unknown</string>
+    <string name="default_seller_name">Яндекс Фабрика</string>
+    <string name="default_promo_discount">-150 ₽</string>
+    <string name="default_promo_code">Промокод WOW500\nЗаказ от 3000₽ • до 20.09</string>
+    
+    <!-- Форматы -->
+    <string name="format_manufacturer_with_arrow">%s ></string>
+    <string name="format_discount_percent">%d%%</string>
+    <string name="format_seller_rating">%s • %s</string>
+    <string name="format_promo_code">Промокод %s\n%s • %s</string>
+    <string name="format_promo_code_simple">Промокод %s</string>
+    <string name="format_reviews_count">(%d)</string>
+    
+    <!-- Сообщения -->
+    <string name="error_no_product_id">Ошибка: ID продукта не найден</string>
+    <string name="message_product_added_to_favorites">Товар добавлен в избранное</string>
+    <string name="message_product_removed_from_favorites">Товар удален из избранного</string>
+    <string name="message_seller_added_to_favorites">Продавец добавлен в избранное</string>
+    <string name="message_seller_removed_from_favorites">Продавец удален из избранного</string>
+    <string name="message_share_product">Поделиться товаром</string>
+    <string name="message_open_seller_page">Открыть страницу продавца</string>
+    <string name="message_select_payment_method">Выбрать способ оплаты</string>
+    <string name="error_failed_to_update">Не удалось обновить данные: %s</string>
+    
+    <!-- Доставка -->
+    <string name="tab_delivery">Доставка</string>
+    <string name="tab_pickup">Самовывоз</string>
+    
+    <!-- Префиксы -->
+    <string name="prefix_promo_code">Промокод </string>
 </resources>

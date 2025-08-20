@@ -74,7 +74,7 @@ class ProductDetailFragment : Fragment() {
         loadProductDetail(productId)
         } ?: run {
             Timber.e("No product ID provided in arguments")
-            SnackbarUtils.showError(requireView(), "Ошибка: ID продукта не найден")
+            SnackbarUtils.showError(requireView(), getString(R.string.error_no_product_id))
             findNavController().navigateUp()
         }
     }
@@ -98,9 +98,9 @@ class ProductDetailFragment : Fragment() {
             
             val message =
                 if (isFavorite) {
-                    "Товар добавлен в избранное"
+                    getString(R.string.message_product_added_to_favorites)
                 } else {
-                    "Товар удален из избранного"
+                    getString(R.string.message_product_removed_from_favorites)
                 }
 
             SnackbarUtils.showFavoriteAction(
@@ -130,7 +130,7 @@ class ProductDetailFragment : Fragment() {
     private fun setupShareButton() {
         binding.shareButton.setOnClickListener {
             Timber.d("Share button clicked")
-            SnackbarUtils.showPlaceholder(requireView(), "Поделиться товаром")
+            SnackbarUtils.showPlaceholder(requireView(), getString(R.string.message_share_product))
         }
     }
 
@@ -141,9 +141,9 @@ class ProductDetailFragment : Fragment() {
             
             val message =
                 if (isSellerFavorite) {
-                    "Продавец добавлен в избранное"
+                    getString(R.string.message_seller_added_to_favorites)
                 } else {
-                    "Продавец удален из избранного"
+                    getString(R.string.message_seller_removed_from_favorites)
                 }
 
             SnackbarUtils.showFavoriteAction(
@@ -160,7 +160,7 @@ class ProductDetailFragment : Fragment() {
         
         binding.sellerDetailsButton.setOnClickListener {
             Timber.d("Seller details button clicked")
-            SnackbarUtils.showPlaceholder(requireView(), "Открыть страницу продавца")
+            SnackbarUtils.showPlaceholder(requireView(), getString(R.string.message_open_seller_page))
         }
     }
     
@@ -222,7 +222,10 @@ class ProductDetailFragment : Fragment() {
                             SnackbarUtils.showError(requireView(), state.message)
                 } else {
                             // Если есть данные из каталога, показываем их, но уведомляем о проблеме с обновлением
-                            SnackbarUtils.showError(requireView(), "Не удалось обновить данные: ${state.message}")
+                            SnackbarUtils.showError(
+                                requireView(),
+                                getString(R.string.error_failed_to_update, state.message)
+                            )
                         }
                     }
                 }
@@ -276,21 +279,21 @@ class ProductDetailFragment : Fragment() {
 
         // Обновляем только изменившиеся части UI
         if (diffCallback.hasBasicInfoChanged()) {
-            val manufacturerName = productDetail.manufacturer.name.takeIf { it.isNotEmpty() } ?: productDetail.vendor ?: "Unknown"
-            updateTextWithoutFlicker(binding.manufacturerText, "$manufacturerName >")
+            val manufacturerName = productDetail.manufacturer.takeIf { it.isNotEmpty() } 
+                ?: getString(R.string.unknown_manufacturer)
+            updateTextWithoutFlicker(
+                binding.manufacturerText, 
+                getString(R.string.format_manufacturer_with_arrow, manufacturerName)
+            )
             updateTextWithoutFlicker(binding.productTitle, productDetail.title)
         }
 
         if (diffCallback.hasPriceInfoChanged()) {
-            // Получаем цену из API-поля current_price или из вложенного объекта price
-            val price = productDetail.currentPrice ?: productDetail.price.currentPrice
-            Timber.d("Price update for ${productDetail.id}: API=${productDetail.currentPrice}, nested=${productDetail.price.currentPrice}, using=$price")
-            updateTextWithoutFlicker(binding.currentPriceText, price)
+            // Используем текущую цену из доменной модели
+            updateTextWithoutFlicker(binding.currentPriceText, productDetail.currentPrice)
 
             // Handle old price (может быть null или пустой)
-            // Получаем старую цену из API-поля old_price или из вложенного объекта price
-            val oldPrice = productDetail.oldPrice ?: productDetail.price.oldPrice
-            Timber.d("Old price update for ${productDetail.id}: API=${productDetail.oldPrice}, nested=${productDetail.price.oldPrice}, using=$oldPrice")
+            val oldPrice = productDetail.oldPrice
             
             if (!oldPrice.isNullOrEmpty() && oldPrice.isNotBlank()) {
                 updateTextWithoutFlicker(binding.oldPriceText, oldPrice)
@@ -301,20 +304,24 @@ class ProductDetailFragment : Fragment() {
                 binding.oldPriceText.visibility = View.GONE
             }
 
-            // Handle discount (может быть null)
-            // Получаем скидку из API-поля discount_percent или из вложенного объекта price
+            // Handle discount
             val discountPercent = productDetail.discountPercent
-            val discountPercentage = productDetail.price.discountPercentage
-            
-            Timber.d("Discount update for ${productDetail.id}: API=${discountPercent}, nested=${discountPercentage}")
             
             if (discountPercent != null && discountPercent > 0) {
-                // Используем значение из API
-                updateTextWithoutFlicker(binding.discountText, "$discountPercent%")
+                // Используем значение из доменной модели
+                updateTextWithoutFlicker(
+                    binding.discountText,
+                    getString(R.string.format_discount_percent, discountPercent)
+                )
                 binding.discountText.visibility = View.VISIBLE
-            } else if (!discountPercentage.isNullOrEmpty() && discountPercentage.isNotBlank()) {
-                // Используем значение из вложенного объекта
-                val formattedDiscount = if (discountPercentage.endsWith("%")) discountPercentage else "$discountPercentage%"
+            } else if (!productDetail.discountPercentage.isNullOrEmpty() && 
+                       productDetail.discountPercentage.isNotBlank()) {
+                // Используем значение из discountPercentage
+                val formattedDiscount = if (productDetail.discountPercentage.endsWith("%")) {
+                    productDetail.discountPercentage
+                } else {
+                    "${productDetail.discountPercentage}%"
+                }
                 updateTextWithoutFlicker(binding.discountText, formattedDiscount)
                 binding.discountText.visibility = View.VISIBLE
             } else {
@@ -324,28 +331,38 @@ class ProductDetailFragment : Fragment() {
         }
 
         if (diffCallback.hasRatingChanged()) {
-            // Rating с проверкой на nullable как в iOS и форматированием до 1 знака после запятой
+            // Rating с проверкой на nullable и форматированием до 1 знака после запятой
             val ratingScore = productDetail.rating.score
             val formattedRating = ratingScore?.takeIf { it > 0 }?.let { 
                 String.format("%.1f", it) 
-            } ?: "4.3"
+            } ?: getString(R.string.default_rating)
             updateTextWithoutFlicker(binding.ratingText, formattedRating)
 
             val reviewsCount = productDetail.rating.reviewsCount
-            updateTextWithoutFlicker(binding.reviewsCountText, reviewsCount?.takeIf { it > 0 }?.let { "($it)" } ?: "(288)")
+            val formattedReviews = reviewsCount?.takeIf { it > 0 }?.let { 
+                getString(R.string.format_reviews_count, it) 
+            } ?: getString(R.string.default_reviews_count)
+            updateTextWithoutFlicker(binding.reviewsCountText, formattedReviews)
         }
 
-                if (diffCallback.hasSellerChanged()) {
+        if (diffCallback.hasSellerChanged()) {
             // Seller data with fallbacks
-            val sellerName = productDetail.seller.name.takeIf { it.isNotEmpty() } ?: productDetail.shopName ?: "Яндекс Фабрика"
+            val sellerName = productDetail.seller.takeIf { it.isNotEmpty() } 
+                ?: getString(R.string.default_seller_name)
             updateTextWithoutFlicker(binding.sellerNameText, sellerName)
 
-            val sellerRating = productDetail.seller.rating
-            val sellerReviews = productDetail.seller.reviewsCount
+            val sellerRating = productDetail.sellerRating
+            val sellerReviews = productDetail.sellerReviewsCount
             if (sellerRating > 0 && sellerReviews.isNotEmpty()) {
-                updateTextWithoutFlicker(binding.sellerRatingText, "$sellerRating • $sellerReviews")
-                } else {
-                updateTextWithoutFlicker(binding.sellerRatingText, "4.5 • Отзывы оценок")
+                updateTextWithoutFlicker(
+                    binding.sellerRatingText, 
+                    getString(R.string.format_seller_rating, sellerRating.toString(), sellerReviews)
+                )
+            } else {
+                updateTextWithoutFlicker(
+                    binding.sellerRatingText, 
+                    getString(R.string.default_seller_rating)
+                )
             }
         }
 
@@ -355,34 +372,38 @@ class ProductDetailFragment : Fragment() {
                 updateTextWithoutFlicker(binding.promoDiscountText, promo.discount)
                 val promoText =
                     if (promo.minOrder != null && promo.expiryDate != null) {
-                        "${promo.code}\n${promo.minOrder} • ${promo.expiryDate}"
+                        getString(
+                            R.string.format_promo_code,
+                            promo.code,
+                            promo.minOrder,
+                            promo.expiryDate
+                        )
                     } else {
-                        promo.code
+                        getString(R.string.format_promo_code_simple, promo.code)
                     }
                 updateTextWithoutFlicker(binding.promoCodeText, promoText)
                 binding.promoDiscountText.visibility = View.VISIBLE
                 binding.promoCodeText.visibility = View.VISIBLE
             } ?: run {
                 // Show sample promo code for demonstration
-                updateTextWithoutFlicker(binding.promoDiscountText, "-150 ₽")
-                updateTextWithoutFlicker(binding.promoCodeText, "WOW500\nЗаказ от 3000₽ • до 20.09")
+                updateTextWithoutFlicker(
+                    binding.promoDiscountText, 
+                    getString(R.string.default_promo_discount)
+                )
+                updateTextWithoutFlicker(
+                    binding.promoCodeText,
+                    getString(R.string.default_promo_code)
+                )
                 binding.promoDiscountText.visibility = View.VISIBLE
                 binding.promoCodeText.visibility = View.VISIBLE
             }
         }
 
         // Определяем список изображений для галереи
-        val galleryImages =
-            when {
-                productDetail.picture_urls.isNotEmpty() -> productDetail.picture_urls
-                productDetail.images.isNotEmpty() -> productDetail.images
-                else -> emptyList()
-            }
+        val galleryImages = productDetail.imageUrls
 
         // Логируем информацию об изображениях
         Timber.d("Gallery images: ${galleryImages.size}")
-        Timber.d("Sources - picture_urls: ${productDetail.picture_urls.size}, images: ${productDetail.images.size}"
-        )
 
         // Обновляем галерею только если изменились изображения и есть что показывать
         if (diffCallback.hasImagesChanged() && galleryImages.isNotEmpty()) {
@@ -398,19 +419,19 @@ class ProductDetailFragment : Fragment() {
      */
     private fun updateAllProductDetails(productDetail: ProductDetail) {
         // Базовая информация
-        val manufacturerName = productDetail.manufacturer.name.takeIf { it.isNotEmpty() } ?: productDetail.vendor ?: "Unknown"
-        updateTextWithoutFlicker(binding.manufacturerText, "$manufacturerName >")
+        val manufacturerName = productDetail.manufacturer.takeIf { it.isNotEmpty() } 
+            ?: getString(R.string.unknown_manufacturer)
+        updateTextWithoutFlicker(
+            binding.manufacturerText, 
+            getString(R.string.format_manufacturer_with_arrow, manufacturerName)
+        )
         updateTextWithoutFlicker(binding.productTitle, productDetail.title)
         
-        // Получаем цену из API-поля current_price или из вложенного объекта price
-        val price = productDetail.currentPrice ?: productDetail.price.currentPrice
-        Timber.d("Price for ${productDetail.id}: API=${productDetail.currentPrice}, nested=${productDetail.price.currentPrice}, using=$price")
-        updateTextWithoutFlicker(binding.currentPriceText, price)
+        // Используем текущую цену из доменной модели
+        updateTextWithoutFlicker(binding.currentPriceText, productDetail.currentPrice)
         
         // Handle old price (может быть null или пустой)
-        // Получаем старую цену из API-поля old_price или из вложенного объекта price
-        val oldPrice = productDetail.oldPrice ?: productDetail.price.oldPrice
-        Timber.d("Old price for ${productDetail.id}: API=${productDetail.oldPrice}, nested=${productDetail.price.oldPrice}, using=$oldPrice")
+        val oldPrice = productDetail.oldPrice
         
         if (!oldPrice.isNullOrEmpty() && oldPrice.isNotBlank()) {
             updateTextWithoutFlicker(binding.oldPriceText, oldPrice)
@@ -421,20 +442,24 @@ class ProductDetailFragment : Fragment() {
             binding.oldPriceText.visibility = View.GONE
         }
         
-        // Handle discount (может быть null)
-        // Получаем скидку из API-поля discount_percent или из вложенного объекта price
+        // Handle discount
         val discountPercent = productDetail.discountPercent
-        val discountPercentage = productDetail.price.discountPercentage
-        
-        Timber.d("Discount for ${productDetail.id}: API=${discountPercent}, nested=${discountPercentage}")
         
         if (discountPercent != null && discountPercent > 0) {
-            // Используем значение из API
-            updateTextWithoutFlicker(binding.discountText, "$discountPercent%")
+            // Используем значение из доменной модели
+            updateTextWithoutFlicker(
+                binding.discountText,
+                getString(R.string.format_discount_percent, discountPercent)
+            )
             binding.discountText.visibility = View.VISIBLE
-        } else if (!discountPercentage.isNullOrEmpty() && discountPercentage.isNotBlank()) {
-            // Используем значение из вложенного объекта
-            val formattedDiscount = if (discountPercentage.endsWith("%")) discountPercentage else "$discountPercentage%"
+        } else if (!productDetail.discountPercentage.isNullOrEmpty() && 
+                  productDetail.discountPercentage.isNotBlank()) {
+            // Используем значение из discountPercentage
+            val formattedDiscount = if (productDetail.discountPercentage.endsWith("%")) {
+                productDetail.discountPercentage
+            } else {
+                "${productDetail.discountPercentage}%"
+            }
             updateTextWithoutFlicker(binding.discountText, formattedDiscount)
             binding.discountText.visibility = View.VISIBLE
         } else {
@@ -442,62 +467,78 @@ class ProductDetailFragment : Fragment() {
             binding.discountText.visibility = View.GONE
         }
         
-        // Rating с проверкой на nullable как в iOS и форматированием до 1 знака после запятой
+        // Rating с проверкой на nullable и форматированием до 1 знака после запятой
         val ratingScore = productDetail.rating.score
         val formattedRating = ratingScore?.takeIf { it > 0 }?.let { 
             String.format("%.1f", it) 
-        } ?: "4.3"
+        } ?: getString(R.string.default_rating)
         updateTextWithoutFlicker(binding.ratingText, formattedRating)
         
         val reviewsCount = productDetail.rating.reviewsCount
-        updateTextWithoutFlicker(binding.reviewsCountText, reviewsCount?.takeIf { it > 0 }?.let { "($it)" } ?: "(288)")
+        val formattedReviews = reviewsCount?.takeIf { it > 0 }?.let { 
+            getString(R.string.format_reviews_count, it) 
+        } ?: getString(R.string.default_reviews_count)
+        updateTextWithoutFlicker(binding.reviewsCountText, formattedReviews)
         
         // Seller data with fallbacks
-        val sellerName = productDetail.seller.name.takeIf { it.isNotEmpty() } ?: productDetail.shopName ?: "Яндекс Фабрика"
+        val sellerName = productDetail.seller.takeIf { it.isNotEmpty() } 
+            ?: getString(R.string.default_seller_name)
         updateTextWithoutFlicker(binding.sellerNameText, sellerName)
         
-        val sellerRating = productDetail.seller.rating
-        val sellerReviews = productDetail.seller.reviewsCount
+        val sellerRating = productDetail.sellerRating
+        val sellerReviews = productDetail.sellerReviewsCount
         if (sellerRating > 0 && sellerReviews.isNotEmpty()) {
-            updateTextWithoutFlicker(binding.sellerRatingText, "$sellerRating • $sellerReviews")
+            updateTextWithoutFlicker(
+                binding.sellerRatingText, 
+                getString(R.string.format_seller_rating, sellerRating.toString(), sellerReviews)
+            )
         } else {
-            updateTextWithoutFlicker(binding.sellerRatingText, "4.5 • Отзывы оценок")
+            updateTextWithoutFlicker(
+                binding.sellerRatingText, 
+                getString(R.string.default_seller_rating)
+            )
         }
         
         // Handle promo code
         productDetail.promoCode?.let { promo ->
             updateTextWithoutFlicker(binding.promoDiscountText, promo.discount)
             // Обрабатываем префикс "Промокод" в коде промокода
-            val cleanCode = if (promo.code.startsWith("Промокод ")) {
-                promo.code.substring("Промокод ".length)
+            val cleanCode = if (promo.code.startsWith(getString(R.string.prefix_promo_code))) {
+                promo.code.substring(getString(R.string.prefix_promo_code).length)
             } else {
                 promo.code
             }
             
             val promoText =
-            if (promo.minOrder != null && promo.expiryDate != null) {
-                    "Промокод ${cleanCode}\n${promo.minOrder} • ${promo.expiryDate}"
+                if (promo.minOrder != null && promo.expiryDate != null) {
+                    getString(
+                        R.string.format_promo_code,
+                        cleanCode,
+                        promo.minOrder,
+                        promo.expiryDate
+                    )
                 } else {
-                    "Промокод ${cleanCode}"
-            }
+                    getString(R.string.format_promo_code_simple, cleanCode)
+                }
             updateTextWithoutFlicker(binding.promoCodeText, promoText)
             binding.promoDiscountText.visibility = View.VISIBLE
             binding.promoCodeText.visibility = View.VISIBLE
         } ?: run {
             // Show sample promo code for demonstration
-            updateTextWithoutFlicker(binding.promoDiscountText, "-150 ₽")
-            updateTextWithoutFlicker(binding.promoCodeText, "Промокод WOW500\nЗаказ от 3000₽ • до 20.09")
+            updateTextWithoutFlicker(
+                binding.promoDiscountText, 
+                getString(R.string.default_promo_discount)
+            )
+            updateTextWithoutFlicker(
+                binding.promoCodeText,
+                getString(R.string.default_promo_code)
+            )
             binding.promoDiscountText.visibility = View.VISIBLE
             binding.promoCodeText.visibility = View.VISIBLE
         }
 
         // Определяем список изображений для галереи
-        val galleryImages =
-            when {
-                productDetail.picture_urls.isNotEmpty() -> productDetail.picture_urls
-                productDetail.images.isNotEmpty() -> productDetail.images
-                else -> emptyList()
-            }
+        val galleryImages = productDetail.imageUrls
 
         // Логируем информацию об изображениях
         Timber.d("Gallery images for initial setup: ${galleryImages.size}")
@@ -537,8 +578,8 @@ class ProductDetailFragment : Fragment() {
         val tabLayout = binding.deliveryMethodTabs
         tabLayout.removeAllTabs()
 
-        val deliveryTab = tabLayout.newTab().setText("Доставка")
-        val pickupTab = tabLayout.newTab().setText("Самовывоз")
+        val deliveryTab = tabLayout.newTab().setText(getString(R.string.tab_delivery))
+        val pickupTab = tabLayout.newTab().setText(getString(R.string.tab_pickup))
 
         tabLayout.addTab(deliveryTab)
         tabLayout.addTab(pickupTab)
@@ -547,7 +588,10 @@ class ProductDetailFragment : Fragment() {
     private fun setupPaymentMethodButton() {
         binding.paymentMethodButton.setOnClickListener {
             Timber.d("Payment method button clicked")
-            SnackbarUtils.showPlaceholder(requireView(), "Выбрать способ оплаты")
+            SnackbarUtils.showPlaceholder(
+                requireView(), 
+                getString(R.string.message_select_payment_method)
+            )
         }
     }
     
