@@ -10,6 +10,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import ru.yandex.speed.workshop.android.data.local.FavoritesManager
 import ru.yandex.speed.workshop.android.domain.models.ProductDetail
+import ru.yandex.speed.workshop.android.domain.models.ProductRating
+import ru.yandex.speed.workshop.android.domain.models.ProductDelivery
+import ru.yandex.speed.workshop.android.domain.models.ProductDeliveryOption
 import ru.yandex.speed.workshop.android.domain.repository.ProductRepository
 import ru.yandex.speed.workshop.android.domain.repository.Result
 import ru.yandex.speed.workshop.android.presentation.ui.UiState
@@ -139,53 +142,33 @@ class ProductDetailViewModel
                 val productVendor = savedStateHandle.get<String>("productVendor") ?: "Unknown"
                 val productShopName = savedStateHandle.get<String>("productShopName") ?: "Unknown"
 
+                // Создаем предварительные данные с новой структурой модели
                 ProductDetail(
                     id = productId,
                     title = productTitle,
-                    images = productImages,
-                    // Всегда синхронизируем оба поля изображений
-                    picture_urls = productImages,
-                    price =
-                        ProductDetail.Pricing(
-                            currentPrice = productPrice,
-                            oldPrice = productOldPrice,
-                            discountPercentage = if (productDiscountPercent > 0) "$productDiscountPercent%" else null,
-                            paymentMethod = "Картой онлайн",
-                        ),
-                    rating =
-                        ProductDetail.ProductDetailRating(
-                            // Округляем рейтинг до одного знака после запятой для согласованности
-                            score = String.format("%.1f", productRatingScore).toDouble(),
-                            reviewsCount = productRatingReviews,
-                        ),
-                    manufacturer =
-                        ProductDetail.Manufacturer(
-                            name = productVendor,
-                            badge = "",
-                            isOriginal = false,
-                        ),
-                    seller =
-                        ProductDetail.Seller(
-                            name = productShopName,
-                            logo = "",
-                            rating = 0.0,
-                            reviewsCount = "",
-                            isFavorite = false,
-                        ),
+                    currentPrice = productPrice,
+                    oldPrice = productOldPrice,
+                    discountPercent = if (productDiscountPercent > 0) productDiscountPercent else null,
+                    imageUrls = productImages,
+                    manufacturer = productVendor,
+                    seller = productShopName,
+                    rating = ProductRating(
+                        score = String.format("%.1f", productRatingScore).toDouble(),
+                        reviewsCount = productRatingReviews
+                    ),
                     isFavorite = _isFavorite.value,
-                    delivery =
-                        ProductDetail.ProductDetailDelivery(
-                            provider = "Яндекс Доставка",
-                            options =
-                                listOf(
-                                    ProductDetail.ProductDetailDeliveryOption(
-                                        type = "Доставка",
-                                        date = "Завтра",
-                                        details = "Бесплатно",
-                                        isSelected = true,
-                                    ),
-                                ),
-                        ),
+                    delivery = ProductDelivery(
+                        provider = "Яндекс Доставка",
+                        options = listOf(
+                            ProductDeliveryOption(
+                                type = "Доставка",
+                                date = "Завтра",
+                                details = "Бесплатно",
+                                isSelected = true
+                            )
+                        )
+                    ),
+                    paymentMethod = "Картой онлайн",
                 )
             } catch (e: Exception) {
                 Timber.e(e, "Error creating preloaded data from args")
