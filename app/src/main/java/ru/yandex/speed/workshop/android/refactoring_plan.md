@@ -2,48 +2,6 @@
 
 ## 1. Выявленные проблемы и "костыли" в коде
 
-### 1.2. Проблемы с UI и отображением данных
-
-#### 1.2.1. Жёстко закодированные значения по умолчанию
-
-**Проблема**: В коде UI используются жёстко закодированные значения по умолчанию:
-
-```kotlin
-updateTextWithoutFlicker(binding.ratingText, formattedRating ?: "4.3")
-updateTextWithoutFlicker(binding.reviewsCountText, reviewsCount?.let { "($it)" } ?: "(288)")
-updateTextWithoutFlicker(binding.sellerRatingText, "4.5 • Отзывы оценок")
-```
-
-**Последствия**: Трудности с локализацией и поддержкой кода, потенциальные ошибки при изменении требований.
-
-#### 1.2.2. Сложная логика обновления UI
-
-**Проблема**: В `ProductDetailFragment` используется сложная логика для обновления UI с множеством условий:
-
-```kotlin
-if (discountPercent != null && discountPercent > 0) {
-    // Используем значение из API
-    updateTextWithoutFlicker(binding.discountText, "$discountPercent%")
-    binding.discountText.visibility = View.VISIBLE
-} else if (!discountPercentage.isNullOrEmpty() && discountPercentage.isNotBlank()) {
-    // Используем значение из вложенного объекта
-    val formattedDiscount = if (discountPercentage.endsWith("%")) discountPercentage else "$discountPercentage%"
-    updateTextWithoutFlicker(binding.discountText, formattedDiscount)
-    binding.discountText.visibility = View.VISIBLE
-} else {
-    // Скрываем скидку, если её нет
-    binding.discountText.visibility = View.GONE
-}
-```
-
-**Последствия**: Код становится сложным для понимания и поддержки, увеличивается вероятность ошибок.
-
-#### 1.2.3. Дублирование кода в ProductDetailFragment
-
-**Проблема**: Методы `updateProductDetailContent` и `updateAllProductDetails` содержат дублирующийся код для обновления UI.
-
-**Последствия**: Нарушение принципа DRY (Don't Repeat Yourself), сложности с поддержкой кода.
-
 ### 1.3. Проблемы с сетевыми запросами и обработкой ошибок
 
 #### 1.3.1. Несогласованная обработка ошибок
@@ -79,81 +37,6 @@ val response = api.getProductsList(page, perPage).execute()
 **Последствия**: Потенциальные проблемы с производительностью и блокировкой потоков.
 
 ## 2. План рефакторинга
-
-### 2.2. Улучшение UI-кода
-
-#### 2.2.1. Выделение презентеров для UI-компонентов
-
-1. Создать отдельные классы для отображения различных частей UI:
-   - `ProductImagePresenter` для работы с галереей изображений
-   - `ProductPricePresenter` для работы с ценами и скидками
-   - `ProductInfoPresenter` для работы с основной информацией
-
-2. Пример реализации:
-
-```kotlin
-class ProductPricePresenter {
-    fun formatPrice(product: ProductDetail): FormattedPrice {
-        return FormattedPrice(
-            currentPrice = product.currentPrice,
-            oldPrice = product.oldPrice,
-            discountText = formatDiscount(product),
-            showOldPrice = product.oldPrice != null,
-            showDiscount = product.hasDiscount
-        )
-    }
-    
-    private fun formatDiscount(product: ProductDetail): String {
-        return when {
-            product.discountPercent != null -> "${product.discountPercent}%"
-            product.discountPercentage != null -> 
-                if (product.discountPercentage.endsWith("%")) 
-                    product.discountPercentage 
-                else 
-                    "${product.discountPercentage}%"
-            else -> ""
-        }
-    }
-}
-
-data class FormattedPrice(
-    val currentPrice: String,
-    val oldPrice: String?,
-    val discountText: String,
-    val showOldPrice: Boolean,
-    val showDiscount: Boolean
-)
-```
-
-#### 2.2.2. Создание расширений для упрощения работы с UI
-
-```kotlin
-fun TextView.setTextIfChanged(newText: String) {
-    if (text.toString() != newText) {
-        text = newText
-    }
-}
-
-fun View.setVisibleIf(condition: Boolean) {
-    visibility = if (condition) View.VISIBLE else View.GONE
-}
-```
-
-#### 2.2.3. Использование ресурсов вместо жёстко закодированных значений
-
-1. Переместить все строковые константы в `strings.xml`:
-
-```xml
-<string name="default_rating">4.3</string>
-<string name="default_reviews_count">(288)</string>
-<string name="default_seller_rating">4.5 • Отзывы оценок</string>
-```
-
-2. Использовать их в коде:
-
-```kotlin
-val formattedRating = ratingScore?.let { String.format("%.1f", it) } ?: getString(R.string.default_rating)
-```
 
 ### 2.3. Улучшение сетевого слоя
 
@@ -274,14 +157,10 @@ override suspend fun getProductDetail(id: String): Result<ProductDetail> {
 ## 3. Приоритеты рефакторинга
 
 1. **Высокий приоритет**:
-   - ✅ Реорганизация моделей данных для устранения дублирования
    - Унификация обработки ошибок в сетевом слое
-   - ✅ Выделение презентеров для UI-компонентов
 
 2. **Средний приоритет**:
    - Переход на корутины в Retrofit
-   - ✅ Использование ресурсов вместо жёстко закодированных значений
-   - ✅ Создание расширений для упрощения работы с UI
 
 3. **Низкий приоритет**:
    - Улучшение кэширования с использованием Room
@@ -289,12 +168,10 @@ override suspend fun getProductDetail(id: String): Result<ProductDetail> {
 
 ## 4. Оценка времени и ресурсов
 
-1. **Реорганизация моделей данных**: ✅ Выполнено
-2. **Улучшение UI-кода**: ✅ Выполнено
-3. **Улучшение сетевого слоя**: 1-2 дня
-4. **Улучшение кэширования**: 2-3 дня
+1. **Улучшение сетевого слоя**: 1-2 дня
+2. **Улучшение кэширования**: 2-3 дня
 
-**Общая оценка**: 5-8 дней работы одного разработчика
+**Общая оценка**: 3-5 дней работы одного разработчика
 
 ## 5. Риски и их митигация
 
