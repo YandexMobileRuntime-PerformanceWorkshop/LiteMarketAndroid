@@ -1,12 +1,15 @@
 package ru.yandex.speed.workshop.android.data.mappers
 
 import ru.yandex.speed.workshop.android.data.network.dto.ProductDto
+import ru.yandex.speed.workshop.android.domain.models.Delivery
+import ru.yandex.speed.workshop.android.domain.models.DeliveryOption
 import ru.yandex.speed.workshop.android.domain.models.Product
 import ru.yandex.speed.workshop.android.domain.models.ProductDetail
 import ru.yandex.speed.workshop.android.domain.models.ProductDelivery
 import ru.yandex.speed.workshop.android.domain.models.ProductDeliveryOption
 import ru.yandex.speed.workshop.android.domain.models.ProductRating
 import ru.yandex.speed.workshop.android.domain.models.PromoCode
+import ru.yandex.speed.workshop.android.domain.models.Rating
 
 /**
  * Конвертирует DTO в доменную модель Product
@@ -22,7 +25,7 @@ fun ProductDto.toDomain(): Product {
         manufacturer = vendor ?: "Unknown",
         seller = shopName ?: "Unknown",
         rating = rating?.let {
-            ProductRating(
+            Rating(
                 score = it.score,
                 reviewsCount = it.reviewsCount
             )
@@ -34,6 +37,19 @@ fun ProductDto.toDomain(): Product {
                 discount = it.discount,
                 minOrder = it.minOrder,
                 expiryDate = it.expiryDate
+            )
+        },
+        delivery = delivery?.let {
+            Delivery(
+                provider = it.provider ?: "",
+                options = it.options?.map { option ->
+                    DeliveryOption(
+                        type = option.type ?: "",
+                        date = option.date ?: "",
+                        details = option.details ?: "",
+                        isSelected = option.isSelected ?: false
+                    )
+                } ?: emptyList()
             )
         }
     )

@@ -4,6 +4,7 @@ import androidx.paging.PagingSource
 import androidx.paging.PagingState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import ru.yandex.speed.workshop.android.data.mappers.toDomain
 import ru.yandex.speed.workshop.android.data.network.ProductApi
 import ru.yandex.speed.workshop.android.domain.models.Product
 
@@ -34,7 +35,7 @@ class ProductsPagingSource(
                     }
                 }
 
-            val data = response.products
+            val data = response.products.map { it.toDomain() }
             val nextKey = if (response.hasMore) page + 1 else null
             val prevKey = if (page > 1) page - 1 else null
 
