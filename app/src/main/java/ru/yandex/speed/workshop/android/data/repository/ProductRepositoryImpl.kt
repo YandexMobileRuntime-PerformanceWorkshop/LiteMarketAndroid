@@ -5,8 +5,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import ru.yandex.speed.workshop.android.data.mappers.toDomain
-import ru.yandex.speed.workshop.android.data.mappers.toDomainProductDetail
-import ru.yandex.speed.workshop.android.data.mappers.toDomainProducts
+import ru.yandex.speed.workshop.android.data.mappers.toDomainDetail
 import ru.yandex.speed.workshop.android.data.network.ProductApi
 import ru.yandex.speed.workshop.android.domain.models.Product
 import ru.yandex.speed.workshop.android.domain.models.ProductDetail
@@ -55,8 +54,8 @@ class ProductRepositoryImpl(
                     listCache[cacheKey] = data
 
                     // Кэшируем отдельные продукты
-                    val domainProducts = data.toDomainProducts()
-                    domainProducts.forEach { product ->
+                    data.products.forEach { productDto ->
+                        val product = productDto.toDomain()
                         productCache.put(product.id, product)
                     }
 
@@ -94,8 +93,8 @@ class ProductRepositoryImpl(
                     listCache[cacheKey] = data
 
                     // Кэшируем отдельные продукты
-                    val domainProducts = data.toDomainProducts()
-                    domainProducts.forEach { product ->
+                    data.products.forEach { productDto ->
+                        val product = productDto.toDomain()
                         productCache.put(product.id, product)
                     }
 
@@ -120,8 +119,9 @@ class ProductRepositoryImpl(
                 try {
                     val response = api.getProductDetail(id).execute()
                     if (response.isSuccessful && response.body() != null) {
-                        val freshData = response.body()!!.toDomainProductDetail()
-                        if (freshData != null) {
+                        val productDto = response.body()!!.product
+                        if (productDto != null) {
+                            val freshData = productDto.toDomainDetail()
                             detailCache.put(id, freshData)
                             Timber.d("Updated cache for product $id")
                         }
@@ -140,9 +140,11 @@ class ProductRepositoryImpl(
                 val response = api.getProductDetail(id).execute()
                 if (response.isSuccessful && response.body() != null) {
                     val productResponse = response.body()!!
-                    val domainProductDetail = productResponse.toDomainProductDetail()
-
-                    if (domainProductDetail != null) {
+                    val productDto = productResponse.product
+                    
+                    if (productDto != null) {
+                        val domainProductDetail = productDto.toDomainDetail()
+                        
                         // Логируем полученные данные для отладки
                         Timber.d("Product detail received: id=${domainProductDetail.id}, title=${domainProductDetail.title}")
                         Timber.d("Images count: ${domainProductDetail.imageUrls.size}")
