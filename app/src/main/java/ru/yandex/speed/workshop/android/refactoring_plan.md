@@ -2,57 +2,6 @@
 
 ## 1. Выявленные проблемы и "костыли" в коде
 
-### 1.1. Проблемы с моделями данных и их обработкой
-
-#### 1.1.1. Дублирование полей в ProductDetail
-
-**Проблема**: В классе `ProductDetail` есть дублирование полей. Одни и те же данные могут храниться в нескольких местах:
-- Поля верхнего уровня (`currentPrice`, `oldPrice`, `discountPercent`, `vendor`, `shopName`)
-- Вложенные объекты (`price`, `manufacturer`, `seller`)
-
-```kotlin
-@Serializable
-data class ProductDetail(
-    // ...
-    val price: Pricing = Pricing(),
-    @SerialName("current_price")
-    val currentPrice: String? = null,
-    @SerialName("old_price")
-    val oldPrice: String? = null,
-    // ...
-)
-```
-
-**Последствия**: Необходимость сложной синхронизации данных и проверок в коде:
-
-```kotlin
-val updatedProduct = data.copy(
-    // ...
-    price = data.price.copy(
-        currentPrice = data.currentPrice ?: data.price.currentPrice,
-        oldPrice = data.oldPrice ?: data.price.oldPrice,
-        // ...
-    ),
-    // ...
-)
-```
-
-#### 1.1.2. Несогласованность полей изображений
-
-**Проблема**: Изображения могут храниться в двух разных полях: `images` и `picture_urls`
-
-```kotlin
-val finalImages = when {
-    data.picture_urls.isNotEmpty() -> data.picture_urls
-    data.images.isNotEmpty() -> data.images
-    else -> {
-        // Fallback к кэшу...
-    }
-}
-```
-
-**Последствия**: Необходимость сложной логики выбора источника изображений и их синхронизации.
-
 ### 1.2. Проблемы с UI и отображением данных
 
 #### 1.2.1. Жёстко закодированные значения по умолчанию
@@ -131,37 +80,6 @@ val response = api.getProductsList(page, perPage).execute()
 
 ## 2. План рефакторинга
 
-### 2.1. Реорганизация моделей данных
-
-#### 2.1.1. Создание адаптеров для моделей данных
-
-1. Создать отдельные классы для DTO (Data Transfer Objects) и доменных моделей:
-   - `ProductDetailDto` для десериализации ответов API
-   - `ProductDetail` как чистая доменная модель
-
-2. Реализовать маппинг между DTO и доменными моделями:
-
-```kotlin
-fun ProductDetailDto.toDomain(): ProductDetail {
-    return ProductDetail(
-        id = id,
-        title = title,
-        price = Price(
-            currentPrice = currentPrice ?: price.currentPrice,
-            oldPrice = oldPrice ?: price.oldPrice,
-            // ...
-        ),
-        images = picture_urls.takeIf { it.isNotEmpty() } ?: images,
-        // ...
-    )
-}
-```
-
-#### 2.1.2. Упрощение модели ProductDetail
-
-1. Удалить дублирующие поля, оставив только один источник данных для каждого типа информации
-2. Создать билдер или фабрику для создания объектов `ProductDetail` с корректными значениями
-
 ### 2.2. Улучшение UI-кода
 
 #### 2.2.1. Выделение презентеров для UI-компонентов
@@ -177,29 +95,24 @@ fun ProductDetailDto.toDomain(): ProductDetail {
 class ProductPricePresenter {
     fun formatPrice(product: ProductDetail): FormattedPrice {
         return FormattedPrice(
-            currentPrice = product.price.currentPrice,
-            oldPrice = product.price.oldPrice,
+            currentPrice = product.currentPrice,
+            oldPrice = product.oldPrice,
             discountText = formatDiscount(product),
-            showOldPrice = !product.price.oldPrice.isNullOrEmpty(),
-            showDiscount = hasDiscount(product)
+            showOldPrice = product.oldPrice != null,
+            showDiscount = product.hasDiscount
         )
     }
     
     private fun formatDiscount(product: ProductDetail): String {
         return when {
-            product.price.discountPercent != null -> "${product.price.discountPercent}%"
-            !product.price.discountPercentage.isNullOrEmpty() -> 
-                if (product.price.discountPercentage.endsWith("%")) 
-                    product.price.discountPercentage 
+            product.discountPercent != null -> "${product.discountPercent}%"
+            product.discountPercentage != null -> 
+                if (product.discountPercentage.endsWith("%")) 
+                    product.discountPercentage 
                 else 
-                    "${product.price.discountPercentage}%"
+                    "${product.discountPercentage}%"
             else -> ""
         }
-    }
-    
-    private fun hasDiscount(product: ProductDetail): Boolean {
-        return product.price.discountPercent != null && product.price.discountPercent > 0 ||
-               !product.price.discountPercentage.isNullOrEmpty()
     }
 }
 
@@ -361,7 +274,7 @@ override suspend fun getProductDetail(id: String): Result<ProductDetail> {
 ## 3. Приоритеты рефакторинга
 
 1. **Высокий приоритет**:
-   - Реорганизация моделей данных для устранения дублирования
+   - ✅ Реорганизация моделей данных для устранения дублирования
    - Унификация обработки ошибок в сетевом слое
    - Выделение презентеров для UI-компонентов
 
@@ -376,12 +289,12 @@ override suspend fun getProductDetail(id: String): Result<ProductDetail> {
 
 ## 4. Оценка времени и ресурсов
 
-1. **Реорганизация моделей данных**: 1-2 дня
+1. **Реорганизация моделей данных**: ✅ Выполнено
 2. **Улучшение UI-кода**: 2-3 дня
 3. **Улучшение сетевого слоя**: 1-2 дня
 4. **Улучшение кэширования**: 2-3 дня
 
-**Общая оценка**: 6-10 дней работы одного разработчика
+**Общая оценка**: 5-8 дней работы одного разработчика
 
 ## 5. Риски и их митигация
 
