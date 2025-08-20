@@ -37,12 +37,12 @@ class ProductInfoPresenter(private val context: Context) {
      */
     fun formatRating(product: ProductDetail): ProductRatingInfo {
         val ratingScore = product.rating.score
-        val formattedRating = ratingScore?.takeIf { it > 0 }?.let { 
+        val formattedRating = ratingScore.takeIf { it > 0 }?.let { 
             String.format("%.1f", it) 
         } ?: context.getString(R.string.default_rating)
         
         val reviewsCount = product.rating.reviewsCount
-        val formattedReviews = reviewsCount?.takeIf { it > 0 }?.let { 
+        val formattedReviews = reviewsCount.takeIf { it > 0 }?.let { 
             context.getString(R.string.format_reviews_count, it) 
         } ?: context.getString(R.string.default_reviews_count)
         

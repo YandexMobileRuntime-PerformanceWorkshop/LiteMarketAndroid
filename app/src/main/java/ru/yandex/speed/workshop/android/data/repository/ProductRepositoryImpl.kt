@@ -6,7 +6,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import ru.yandex.speed.workshop.android.data.mappers.toDomain
 import ru.yandex.speed.workshop.android.data.mappers.toDomainDetail
+import ru.yandex.speed.workshop.android.data.network.NetworkException
 import ru.yandex.speed.workshop.android.data.network.ProductApi
+import ru.yandex.speed.workshop.android.data.network.safeExecute
 import ru.yandex.speed.workshop.android.domain.models.Product
 import ru.yandex.speed.workshop.android.domain.models.ProductDetail
 import ru.yandex.speed.workshop.android.domain.models.ProductListResponse
@@ -45,11 +47,13 @@ class ProductRepositoryImpl(
             }
 
             // Если нет в кэше, загружаем с API
-            return@withContext try {
-                val response = api.getProductsList(page, perPage).execute()
-                if (response.isSuccessful && response.body() != null) {
-                    val data = response.body()!!
-
+            val result = api.getProductsList(page, perPage).safeExecute()
+            
+            // Обрабатываем результат
+            return@withContext when (result) {
+                is Result.Success -> {
+                    val data = result.data
+                    
                     // Кэшируем список
                     listCache[cacheKey] = data
 
@@ -58,15 +62,14 @@ class ProductRepositoryImpl(
                         val product = productDto.toDomain()
                         productCache.put(product.id, product)
                     }
-
-                    Result.Success(data)
-                } else {
-                    Timber.e("Error loading products list: ${response.code()} ${response.message()}")
-                    Result.Error(Exception("Failed to load products: ${response.code()}"))
+                    
+                    result
                 }
-            } catch (e: Exception) {
-                Timber.e(e, "Exception loading products list")
-                Result.Error(e)
+                is Result.Error -> {
+                    Timber.e(result.exception, "Error loading products list")
+                    result
+                }
+                else -> result
             }
         }
 
@@ -84,11 +87,13 @@ class ProductRepositoryImpl(
             }
 
             // Если нет в кэше, загружаем с API
-            return@withContext try {
-                val response = api.searchProducts(query, page, perPage).execute()
-                if (response.isSuccessful && response.body() != null) {
-                    val data = response.body()!!
-
+            val result = api.searchProducts(query, page, perPage).safeExecute()
+            
+            // Обрабатываем результат
+            return@withContext when (result) {
+                is Result.Success -> {
+                    val data = result.data
+                    
                     // Кэшируем список
                     listCache[cacheKey] = data
 
@@ -97,15 +102,14 @@ class ProductRepositoryImpl(
                         val product = productDto.toDomain()
                         productCache.put(product.id, product)
                     }
-
-                    Result.Success(data)
-                } else {
-                    Timber.e("Error searching products: ${response.code()} ${response.message()}")
-                    Result.Error(Exception("Failed to search products: ${response.code()}"))
+                    
+                    result
                 }
-            } catch (e: Exception) {
-                Timber.e(e, "Exception searching products")
-                Result.Error(e)
+                is Result.Error -> {
+                    Timber.e(result.exception, "Error searching products")
+                    result
+                }
+                else -> result
             }
         }
 
@@ -116,19 +120,17 @@ class ProductRepositoryImpl(
                 Timber.d("Using cached product detail for $id")
 
                 // Асинхронно обновляем кэш свежими данными
-                try {
-                    val response = api.getProductDetail(id).execute()
-                    if (response.isSuccessful && response.body() != null) {
-                        val productDto = response.body()!!.product
-                        if (productDto != null) {
-                            val freshData = productDto.toDomainDetail()
-                            detailCache.put(id, freshData)
-                            Timber.d("Updated cache for product $id")
-                        }
+                val refreshResult = api.getProductDetail(id).safeExecute()
+                if (refreshResult is Result.Success) {
+                    val productDto = refreshResult.data.product
+                    if (productDto != null) {
+                        val freshData = productDto.toDomainDetail()
+                        detailCache.put(id, freshData)
+                        Timber.d("Updated cache for product $id")
                     }
-                } catch (e: Exception) {
+                } else if (refreshResult is Result.Error) {
                     // Логируем ошибку, но не прерываем поток
-                    Timber.e(e, "Failed to refresh cache for product $id")
+                    Timber.e(refreshResult.exception, "Failed to refresh cache for product $id")
                 }
 
                 // Возвращаем кэшированные данные немедленно
@@ -136,10 +138,11 @@ class ProductRepositoryImpl(
             }
 
             // Если нет в кэше, загружаем с API
-            return@withContext try {
-                val response = api.getProductDetail(id).execute()
-                if (response.isSuccessful && response.body() != null) {
-                    val productResponse = response.body()!!
+            val result = api.getProductDetail(id).safeExecute()
+            
+            return@withContext when (result) {
+                is Result.Success -> {
+                    val productResponse = result.data
                     val productDto = productResponse.product
                     
                     if (productDto != null) {
@@ -156,15 +159,14 @@ class ProductRepositoryImpl(
                         Result.Success(domainProductDetail)
                     } else {
                         Timber.e("Product detail is null in response")
-                        Result.Error(Exception("Product detail is null in response"))
+                        Result.Error(NetworkException.EmptyResponseError("Product detail is null in response"))
                     }
-                } else {
-                    Timber.e("Error loading product detail: ${response.code()} ${response.message()}")
-                    Result.Error(Exception("Failed to load product detail: ${response.code()}"))
                 }
-            } catch (e: Exception) {
-                Timber.e(e, "Exception loading product detail")
-                Result.Error(e)
+                is Result.Error -> {
+                    Timber.e(result.exception, "Error loading product detail")
+                    result
+                }
+                else -> result
             }
         }
 
