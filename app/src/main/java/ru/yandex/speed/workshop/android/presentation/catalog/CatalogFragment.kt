@@ -261,7 +261,7 @@ class CatalogFragment : Fragment() {
                     Bundle().apply {
                         putString("productId", product.id)
                         putString("productTitle", product.title)
-                        putString("productPrice", product.price)
+                        putString("productPrice", product.currentPrice)
                         putString("productOldPrice", product.oldPrice)
                         putInt("productDiscountPercent", product.discountPercent ?: 0)
                         putFloat("productRatingScore", (product.rating?.score ?: 0.0).toFloat())
@@ -269,7 +269,7 @@ class CatalogFragment : Fragment() {
                         putString("productVendor", product.manufacturer)
                         putString("productShopName", product.seller)
                         putBoolean("isFavorite", viewModel.isProductFavorite(product.id))
-                        putStringArray("productImages", product.images.toTypedArray())
+                        putStringArray("productImages", product.imageUrls.toTypedArray())
                     }
                 navController.navigate(R.id.action_catalog_to_product_detail, bundle)
             }
