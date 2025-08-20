@@ -1,6 +1,5 @@
 package ru.yandex.speed.workshop.android.data.network.dto
 
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
@@ -10,6 +9,6 @@ import kotlinx.serialization.Serializable
 data class RatingDto(
     val score: Double = 0.0,
     
-    @SerialName("reviews_count")
+    // Поле в ответе от сервера называется "reviewsCount", а не "reviews_count"
     val reviewsCount: Int = 0
 )
