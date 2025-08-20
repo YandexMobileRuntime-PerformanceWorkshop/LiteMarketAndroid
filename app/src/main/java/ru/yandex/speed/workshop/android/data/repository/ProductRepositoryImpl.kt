@@ -4,6 +4,9 @@ import android.util.LruCache
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import ru.yandex.speed.workshop.android.data.mappers.toDomain
+import ru.yandex.speed.workshop.android.data.mappers.toDomainProductDetail
+import ru.yandex.speed.workshop.android.data.mappers.toDomainProducts
 import ru.yandex.speed.workshop.android.data.network.ProductApi
 import ru.yandex.speed.workshop.android.domain.models.Product
 import ru.yandex.speed.workshop.android.domain.models.ProductDetail
@@ -52,7 +55,8 @@ class ProductRepositoryImpl(
                     listCache[cacheKey] = data
 
                     // Кэшируем отдельные продукты
-                    data.products.forEach { product ->
+                    val domainProducts = data.toDomainProducts()
+                    domainProducts.forEach { product ->
                         productCache.put(product.id, product)
                     }
 
@@ -90,7 +94,8 @@ class ProductRepositoryImpl(
                     listCache[cacheKey] = data
 
                     // Кэшируем отдельные продукты
-                    data.products.forEach { product ->
+                    val domainProducts = data.toDomainProducts()
+                    domainProducts.forEach { product ->
                         productCache.put(product.id, product)
                     }
 
@@ -115,9 +120,11 @@ class ProductRepositoryImpl(
                 try {
                     val response = api.getProductDetail(id).execute()
                     if (response.isSuccessful && response.body() != null) {
-                        val freshData = response.body()!!.product
-                        detailCache.put(id, freshData)
-                        Timber.d("Updated cache for product $id")
+                        val freshData = response.body()!!.toDomainProductDetail()
+                        if (freshData != null) {
+                            detailCache.put(id, freshData)
+                            Timber.d("Updated cache for product $id")
+                        }
                     }
                 } catch (e: Exception) {
                     // Логируем ошибку, но не прерываем поток
@@ -133,65 +140,18 @@ class ProductRepositoryImpl(
                 val response = api.getProductDetail(id).execute()
                 if (response.isSuccessful && response.body() != null) {
                     val productResponse = response.body()!!
-                    val data = productResponse.product
+                    val domainProductDetail = productResponse.toDomainProductDetail()
 
-                    if (data != null) {
+                    if (domainProductDetail != null) {
                         // Логируем полученные данные для отладки
-                        Timber.d("Product detail received: id=${data.id}, title=${data.title}")
-                        Timber.d("Images: ${data.images.size}, picture_urls: ${data.picture_urls.size}"
-                        )
+                        Timber.d("Product detail received: id=${domainProductDetail.id}, title=${domainProductDetail.title}")
+                        Timber.d("Images count: ${domainProductDetail.imageUrls.size}")
 
-                        // Проверяем изображения - всегда используем picture_urls, если они есть
-                        val finalImages =
-                            when {
-                                data.picture_urls.isNotEmpty() -> {
-                                    Timber.d("Using picture_urls for product ${data.id}")
-                                    data.picture_urls
-                                }
-                                data.images.isNotEmpty() -> {
-                                    Timber.d("Using images for product ${data.id}")
-                                    data.images
-                                }
-                                else -> {
-                                    // Если у нас есть кэшированный продукт, проверяем его изображения
-                                    val cachedProduct = productCache.get(id)
-                                    if (cachedProduct != null && cachedProduct.pictureUrls.isNotEmpty()) {
-                                        Timber.d("Using cached pictureUrls for product ${data.id}")
-                                        cachedProduct.pictureUrls
-                                    } else {
-                                        Timber.w("No images found for product ${data.id}")
-                                        emptyList()
-                                    }
-                                }
-                            }
+                        // Кэшируем полученную модель
+                        detailCache.put(id, domainProductDetail)
 
-                        // Обновляем модель с синхронизированными изображениями и ценой
-                        val updatedProduct =
-                            data.copy(
-                                images = finalImages,
-                                picture_urls = finalImages,
-                                // Синхронизируем поля между API и вложенными объектами
-                                price = data.price.copy(
-                                    currentPrice = data.currentPrice ?: data.price.currentPrice,
-                                    oldPrice = data.oldPrice ?: data.price.oldPrice,
-                                    // Преобразуем discount_percent в строку для discountPercentage
-                                    discountPercentage = data.discountPercent?.toString() ?: data.price.discountPercentage
-                                ),
-                                // Синхронизируем информацию о производителе
-                                manufacturer = data.manufacturer.copy(
-                                    name = data.manufacturer.name.takeIf { it.isNotEmpty() } ?: data.vendor ?: data.manufacturer.name
-                                ),
-                                // Синхронизируем информацию о продавце
-                                seller = data.seller.copy(
-                                    name = data.seller.name.takeIf { it.isNotEmpty() } ?: data.shopName ?: data.seller.name
-                                )
-                            )
-
-                        // Кэшируем обновленную модель
-                        detailCache.put(id, updatedProduct)
-
-                        // Возвращаем обновленную модель
-                        Result.Success(updatedProduct)
+                        // Возвращаем полученную модель
+                        Result.Success(domainProductDetail)
                     } else {
                         Timber.e("Product detail is null in response")
                         Result.Error(Exception("Product detail is null in response"))
