@@ -164,9 +164,9 @@ class ProductRepositoryImpl(
                 }
                 is Result.Error -> {
                     Timber.e(result.exception, "Error loading product detail")
-                    result
+                    Result.Error(result.exception)
                 }
-                else -> result
+                else -> Result.Loading
             }
         }
 
