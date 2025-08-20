@@ -270,6 +270,26 @@ class CatalogFragment : Fragment() {
                         putString("productShopName", product.seller)
                         putBoolean("isFavorite", viewModel.isProductFavorite(product.id))
                         putStringArray("productImages", product.imageUrls.toTypedArray())
+                        
+                        // Добавляем информацию о промокоде, если он есть
+                        product.promoCode?.let { promoCode ->
+                            putString("promoCode", promoCode.code)
+                            putString("promoDiscount", promoCode.discount)
+                            putString("promoMinOrder", promoCode.minOrder)
+                            putString("promoExpiryDate", promoCode.expiryDate)
+                        }
+                        
+                        // Добавляем информацию о доставке, если она есть
+                        product.delivery?.let { delivery ->
+                            putString("deliveryProvider", delivery.provider)
+                            val deliveryOptions = delivery.options
+                            if (deliveryOptions.isNotEmpty()) {
+                                val firstOption = deliveryOptions.first()
+                                putString("deliveryType", firstOption.type)
+                                putString("deliveryDate", firstOption.date)
+                                putString("deliveryDetails", firstOption.details)
+                            }
+                        }
                     }
                 navController.navigate(R.id.action_catalog_to_product_detail, bundle)
             }

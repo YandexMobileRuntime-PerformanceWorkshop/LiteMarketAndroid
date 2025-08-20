@@ -13,6 +13,7 @@ import ru.yandex.speed.workshop.android.domain.models.ProductDetail
 import ru.yandex.speed.workshop.android.domain.models.ProductRating
 import ru.yandex.speed.workshop.android.domain.models.ProductDelivery
 import ru.yandex.speed.workshop.android.domain.models.ProductDeliveryOption
+import ru.yandex.speed.workshop.android.domain.models.PromoCode
 import ru.yandex.speed.workshop.android.domain.repository.ProductRepository
 import ru.yandex.speed.workshop.android.domain.repository.Result
 import ru.yandex.speed.workshop.android.presentation.ui.UiState
@@ -142,6 +143,18 @@ class ProductDetailViewModel
                 val productVendor = savedStateHandle.get<String>("productVendor") ?: "Unknown"
                 val productShopName = savedStateHandle.get<String>("productShopName") ?: "Unknown"
 
+                // Получаем данные о промокоде, если они есть
+                val promoCodeValue = savedStateHandle.get<String>("promoCode")
+                val promoDiscount = savedStateHandle.get<String>("promoDiscount")
+                val promoMinOrder = savedStateHandle.get<String>("promoMinOrder")
+                val promoExpiryDate = savedStateHandle.get<String>("promoExpiryDate")
+                
+                // Получаем данные о доставке, если они есть
+                val deliveryProvider = savedStateHandle.get<String>("deliveryProvider") ?: "Яндекс Доставка"
+                val deliveryType = savedStateHandle.get<String>("deliveryType") ?: "Доставка"
+                val deliveryDate = savedStateHandle.get<String>("deliveryDate") ?: "Завтра"
+                val deliveryDetails = savedStateHandle.get<String>("deliveryDetails") ?: "Бесплатно"
+                
                 // Создаем предварительные данные с новой структурой модели
                 ProductDetail(
                     id = productId,
@@ -157,13 +170,23 @@ class ProductDetailViewModel
                         reviewsCount = productRatingReviews
                     ),
                     isFavorite = _isFavorite.value,
+                    // Инициализируем промокод, если данные есть
+                    promoCode = if (promoCodeValue != null && promoDiscount != null) {
+                        PromoCode(
+                            code = promoCodeValue,
+                            discount = promoDiscount,
+                            minOrder = promoMinOrder,
+                            expiryDate = promoExpiryDate
+                        )
+                    } else null,
+                    // Инициализируем доставку с полученными данными
                     delivery = ProductDelivery(
-                        provider = "Яндекс Доставка",
+                        provider = deliveryProvider,
                         options = listOf(
                             ProductDeliveryOption(
-                                type = "Доставка",
-                                date = "Завтра",
-                                details = "Бесплатно",
+                                type = deliveryType,
+                                date = deliveryDate,
+                                details = deliveryDetails,
                                 isSelected = true
                             )
                         )
