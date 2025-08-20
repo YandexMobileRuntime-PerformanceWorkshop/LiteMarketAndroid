@@ -44,62 +44,50 @@ suspend fun getProductsList(page: Int = 1, perPage: Int = 20): Result<ProductLis
 
 ### 2.4. Дополнительные улучшения производительности
 
-#### 2.4.1. Оптимизация загрузки изображений
+#### 2.4.1. Оптимизация работы с RecyclerView
 
-1. Настройка Glide для эффективной загрузки изображений:
+1. Улучшение переиспользования ViewHolder:
 
 ```kotlin
-val requestOptions = RequestOptions()
-    .diskCacheStrategy(DiskCacheStrategy.ALL)
-    .priority(Priority.HIGH)
-    .dontTransform()
-
-Glide.with(context)
-    .load(imageUrl)
-    .apply(requestOptions)
-    .into(imageView)
+// Настройка RecycledViewPool для повторного использования ViewHolder
+val recycledViewPool = RecyclerView.RecycledViewPool()
+recyclerView.setRecycledViewPool(recycledViewPool)
+recycledViewPool.setMaxRecycledViews(VIEW_TYPE_PRODUCT, 20)
 ```
 
-2. Предварительная загрузка изображений для улучшения пользовательского опыта:
+2. Оптимизация макетов для улучшения производительности:
+
+```xml
+<!-- Использование ConstraintLayout вместо вложенных макетов -->
+<androidx.constraintlayout.widget.ConstraintLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+    <!-- Элементы с ограничениями -->
+</androidx.constraintlayout.widget.ConstraintLayout>
+```
+
+#### 2.4.2. Оптимизация потребления памяти
+
+1. Использование WeakReference для предотвращения утечек памяти:
 
 ```kotlin
-fun preloadImages(urls: List<String>) {
-    urls.forEach { url ->
-        Glide.with(context)
-            .load(url)
-            .preload()
+private val weakContext = WeakReference(context)
+
+fun doSomething() {
+    weakContext.get()?.let { ctx ->
+        // Использование контекста
     }
 }
 ```
 
-#### 2.4.2. Оптимизация RecyclerView
-
-1. Использование DiffUtil для эффективного обновления списков:
+2. Оптимизация работы с большими объектами:
 
 ```kotlin
-class ProductDiffCallback(
-    private val oldList: List<Product>,
-    private val newList: List<Product>
-) : DiffUtil.Callback() {
-    // Реализация методов сравнения
-}
-
-// Использование
-val diffResult = DiffUtil.calculateDiff(ProductDiffCallback(oldProducts, newProducts))
-diffResult.dispatchUpdatesTo(adapter)
-```
-
-2. Оптимизация привязки данных в ViewHolder:
-
-```kotlin
-fun bind(product: Product) {
-    // Проверяем, нужно ли обновлять данные
-    if (currentProductId != product.id) {
-        currentProductId = product.id
-        titleView.text = product.title
-        priceView.text = product.currentPrice
-        // Остальные привязки
-    }
+// Освобождение ресурсов, когда они больше не нужны
+override fun onDestroy() {
+    super.onDestroy()
+    imageLoader.clearMemory()
+    binding = null
 }
 ```
 
@@ -109,15 +97,14 @@ fun bind(product: Product) {
    - Переход на корутины в Retrofit
 
 2. **Будущие задачи**:
-   - Оптимизация загрузки изображений
-   - Оптимизация RecyclerView
+   - Дополнительные оптимизации производительности
 
 ## 4. Оценка времени и ресурсов
 
 1. **Улучшение сетевого слоя**: ✅ Унификация обработки ошибок выполнена, осталось внедрение корутин в Retrofit (~1 день)
-2. **Оптимизация UI и производительности**: 1-2 дня
+2. **Дополнительные оптимизации**: 1 день
 
-**Общая оценка**: 2-3 дня работы одного разработчика
+**Общая оценка**: 2 дня работы одного разработчика
 
 ## 5. Риски и их митигация
 
