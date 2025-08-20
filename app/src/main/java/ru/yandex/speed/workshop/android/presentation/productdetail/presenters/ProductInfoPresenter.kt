@@ -90,9 +90,9 @@ class ProductInfoPresenter(private val context: Context) {
         return product.promoCode?.let { promo ->
             formatPromoCodeData(promo)
         } ?: PromoCodeInfo(
-            discountText = context.getString(R.string.default_promo_discount),
-            codeText = context.getString(R.string.default_promo_code),
-            hasPromoCode = true
+            discountText = "",
+            codeText = "",
+            hasPromoCode = false // Не показываем промокод, если он отсутствует
         )
     }
     
