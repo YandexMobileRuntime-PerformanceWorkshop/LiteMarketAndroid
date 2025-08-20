@@ -4,28 +4,6 @@
 
 ### 1.3. Проблемы с сетевыми запросами и обработкой ошибок
 
-#### 1.3.1. Несогласованная обработка ошибок
-
-**Проблема**: В разных частях кода используются разные подходы к обработке ошибок:
-
-```kotlin
-// В ProductService
-if (response.isSuccessful && response.body() != null) {
-    response.body()!!
-} else {
-    ProductListResponse(emptyList(), false) // Возвращаем пустой объект
-}
-
-// В другом месте
-if (response.isSuccessful && response.body() != null) {
-    // ...
-} else {
-    throw NetworkException.HttpError(response.code(), response.message()) // Бросаем исключение
-}
-```
-
-**Последствия**: Непредсказуемое поведение приложения при ошибках, сложности с отладкой.
-
 #### 1.3.2. Неоптимальное использование Retrofit
 
 **Проблема**: Вместо использования корутин с Retrofit напрямую, используется блокирующий вызов `.execute()`:
@@ -56,51 +34,10 @@ interface ProductApi {
 }
 ```
 
-2. Упростить код в сервисах:
+2. Упростить код в сервисах, используя созданный ранее safeApiCall:
 
 ```kotlin
 suspend fun getProductsList(page: Int = 1, perPage: Int = 20): Result<ProductListResponse> {
-    return try {
-        val response = api.getProductsList(page, perPage)
-        if (response.isSuccessful) {
-            Result.Success(response.body() ?: ProductListResponse(emptyList(), false))
-        } else {
-            Result.Error(NetworkException.HttpError(response.code(), response.message()))
-        }
-    } catch (e: Exception) {
-        Result.Error(NetworkException.NetworkError("Failed to get products list", e))
-    }
-}
-```
-
-#### 2.3.2. Унификация обработки ошибок
-
-1. Создать общий обработчик ответов API:
-
-```kotlin
-suspend fun <T> safeApiCall(call: suspend () -> Response<T>): Result<T> {
-    return try {
-        val response = call()
-        if (response.isSuccessful) {
-            val body = response.body()
-            if (body != null) {
-                Result.Success(body)
-            } else {
-                Result.Error(NetworkException.EmptyResponseError("Empty response body"))
-            }
-        } else {
-            Result.Error(NetworkException.HttpError(response.code(), response.message()))
-        }
-    } catch (e: Exception) {
-        Result.Error(NetworkException.NetworkError("Network request failed", e))
-    }
-}
-```
-
-2. Использовать его во всех сетевых вызовах:
-
-```kotlin
-suspend fun getProductsList(page: Int, perPage: Int): Result<ProductListResponse> {
     return safeApiCall { api.getProductsList(page, perPage) }
 }
 ```
@@ -116,7 +53,7 @@ suspend fun getProductsList(page: Int, perPage: Int): Result<ProductListResponse
 data class ProductEntity(
     @PrimaryKey val id: String,
     val title: String,
-    val price: String,
+    val currentPrice: String,
     val oldPrice: String?,
     // ...
 )
@@ -156,22 +93,19 @@ override suspend fun getProductDetail(id: String): Result<ProductDetail> {
 
 ## 3. Приоритеты рефакторинга
 
-1. **Высокий приоритет**:
-   - ✅ Унификация обработки ошибок в сетевом слое
-
-2. **Средний приоритет**:
+1. **Текущий приоритет**:
    - Переход на корутины в Retrofit
 
-3. **Низкий приоритет**:
+2. **Будущие задачи**:
    - Улучшение кэширования с использованием Room
    - Дополнительная оптимизация производительности
 
 ## 4. Оценка времени и ресурсов
 
-1. **Улучшение сетевого слоя**: ✅ Частично выполнено (унификация обработки ошибок)
+1. **Улучшение сетевого слоя**: ✅ Унификация обработки ошибок выполнена, осталось внедрение корутин в Retrofit (~1 день)
 2. **Улучшение кэширования**: 2-3 дня
 
-**Общая оценка**: 3-5 дней работы одного разработчика
+**Общая оценка**: 3-4 дня работы одного разработчика
 
 ## 5. Риски и их митигация
 
