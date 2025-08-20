@@ -44,50 +44,57 @@ suspend fun getProductsList(page: Int = 1, perPage: Int = 20): Result<ProductLis
 
 ### 2.4. Улучшение кэширования
 
-#### 2.4.1. Использование Room для кэширования
+#### 2.4.1. Оптимизация существующего механизма кэширования
 
-1. Создать сущности для базы данных:
+1. Добавить политику устаревания кэша:
 
 ```kotlin
-@Entity(tableName = "products")
-data class ProductEntity(
-    @PrimaryKey val id: String,
-    val title: String,
-    val currentPrice: String,
-    val oldPrice: String?,
-    // ...
+class CachePolicy(
+    val maxAge: Long = TimeUnit.MINUTES.toMillis(5),
+    val forceRefresh: Boolean = false
 )
-```
 
-2. Создать DAO для работы с базой данных:
-
-```kotlin
-@Dao
-interface ProductDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertProduct(product: ProductEntity)
+// Использование в репозитории
+suspend fun getProductDetail(id: String, cachePolicy: CachePolicy = CachePolicy()): Result<ProductDetail> {
+    // Проверяем кэш и его актуальность
+    val cachedProduct = productCache.get(id)
+    val cacheTimestamp = cacheTimestamps[id] ?: 0L
+    val isCacheValid = System.currentTimeMillis() - cacheTimestamp < cachePolicy.maxAge
     
-    @Query("SELECT * FROM products WHERE id = :id")
-    suspend fun getProductById(id: String): ProductEntity?
+    if (!cachePolicy.forceRefresh && cachedProduct != null && isCacheValid) {
+        return Result.Success(cachedProduct)
+    }
     
+    // Загружаем свежие данные с API
     // ...
 }
 ```
 
-3. Обновить репозиторий для использования локальной базы данных:
+2. Улучшить управление памятью для кэша:
 
 ```kotlin
-override suspend fun getProductDetail(id: String): Result<ProductDetail> {
-    // Сначала проверяем кэш в базе данных
-    val cachedProduct = productDao.getProductById(id)
-    if (cachedProduct != null) {
-        // Асинхронно обновляем кэш
-        refreshProductDetail(id)
-        return Result.Success(cachedProduct.toDomain())
+// Настройка размеров кэша в зависимости от доступной памяти
+private fun calculateCacheSize(): Int {
+    val maxMemory = (Runtime.getRuntime().maxMemory() / 1024).toInt()
+    return maxMemory / 8  // Используем 1/8 доступной памяти
+}
+
+private val productCache = LruCache<String, Product>(calculateCacheSize())
+```
+
+3. Добавить возможность предварительной загрузки данных:
+
+```kotlin
+suspend fun prefetchProducts(category: String) {
+    // Загружаем данные заранее и помещаем в кэш
+    val result = safeApiCall { api.getProductsByCategory(category, 1, 20) }
+    if (result is Result.Success) {
+        // Кэшируем результаты
+        result.data.products.forEach { productDto ->
+            val product = productDto.toDomain()
+            productCache.put(product.id, product)
+        }
     }
-    
-    // Если нет в кэше, загружаем с API
-    return fetchProductDetail(id)
 }
 ```
 
@@ -97,23 +104,23 @@ override suspend fun getProductDetail(id: String): Result<ProductDetail> {
    - Переход на корутины в Retrofit
 
 2. **Будущие задачи**:
-   - Улучшение кэширования с использованием Room
+   - Оптимизация существующего механизма кэширования
    - Дополнительная оптимизация производительности
 
 ## 4. Оценка времени и ресурсов
 
 1. **Улучшение сетевого слоя**: ✅ Унификация обработки ошибок выполнена, осталось внедрение корутин в Retrofit (~1 день)
-2. **Улучшение кэширования**: 2-3 дня
+2. **Оптимизация кэширования**: 1-2 дня
 
-**Общая оценка**: 3-4 дня работы одного разработчика
+**Общая оценка**: 2-3 дня работы одного разработчика
 
 ## 5. Риски и их митигация
 
 1. **Риск**: Регрессии в функциональности после рефакторинга
    - **Митигация**: Написание автоматических тестов до начала рефакторинга
 
-2. **Риск**: Увеличение размера приложения из-за добавления новых зависимостей
-   - **Митигация**: Тщательный анализ добавляемых зависимостей и их влияния на размер APK
+2. **Риск**: Увеличение потребления памяти при неправильной настройке кэша
+   - **Митигация**: Тщательное тестирование на устройствах с разным объемом памяти
 
 3. **Риск**: Ухудшение производительности из-за изменений в архитектуре
    - **Митигация**: Профилирование приложения до и после рефакторинга для сравнения производительности
