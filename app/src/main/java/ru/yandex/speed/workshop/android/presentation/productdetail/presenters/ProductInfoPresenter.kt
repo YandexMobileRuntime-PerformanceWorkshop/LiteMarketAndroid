@@ -41,10 +41,9 @@ class ProductInfoPresenter(private val context: Context) {
             String.format("%.1f", it) 
         } ?: context.getString(R.string.default_rating)
         
+        // Всегда используем фактическое количество отзывов, даже если оно 0
         val reviewsCount = product.rating.reviewsCount
-        val formattedReviews = reviewsCount.takeIf { it > 0 }?.let { 
-            context.getString(R.string.format_reviews_count, it) 
-        } ?: context.getString(R.string.default_reviews_count)
+        val formattedReviews = context.getString(R.string.format_reviews_count, reviewsCount)
         
         return ProductRatingInfo(
             formattedRating = formattedRating,
