@@ -6,8 +6,19 @@
     android:layout_height="match_parent"
     android:background="@color/white">
 
+    <!-- Skeleton Container -->
+    <FrameLayout
+        android:id="@+id/skeletonContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone">
+        
+        <include layout="@layout/fragment_product_detail_skeleton" />
+    </FrameLayout>
+    
     <!-- Main Content ScrollView -->
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/contentContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_marginBottom="0dp"
@@ -70,9 +81,25 @@
 
                 <!-- Product Gallery -->
                 <androidx.viewpager2.widget.ViewPager2
-                    android:id="@+id/galleryViewPager"
+                    android:id="@+id/productGallery"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent" />
+                    
+                <!-- Gallery Indicators -->
+                <com.google.android.material.tabs.TabLayout
+                    android:id="@+id/galleryIndicator"
+                    android:layout_width="match_parent"
+                    android:layout_height="10dp"
+                    android:layout_gravity="bottom"
+                    app:tabBackground="@drawable/tab_indicator_selector"
+                    app:tabGravity="center"
+                    app:tabIndicatorHeight="0dp"
+                    app:tabMaxWidth="6dp"
+                    app:tabMinWidth="6dp"
+                    app:tabPaddingStart="2dp"
+                    app:tabPaddingEnd="2dp"
+                    app:tabPaddingTop="0dp"
+                    app:tabPaddingBottom="0dp" />
 
                 <!-- Product Features Overlay убираем - не нужны характеристики на картинке -->
                 <LinearLayout
@@ -179,20 +206,20 @@
             <com.google.android.material.tabs.TabLayout
                 android:id="@+id/pageIndicator"
                 android:layout_width="wrap_content"
-                android:layout_height="16dp"
+                android:layout_height="10dp"
                 android:layout_gravity="center_horizontal"
                 android:layout_marginTop="4dp"
                 android:layout_marginBottom="8dp"
-                android:minHeight="16dp"
+                android:minHeight="10dp"
                 app:tabBackground="@drawable/tab_indicator_selector"
                 app:tabIndicatorHeight="0dp"
                 app:tabGravity="center"
-                app:tabMaxWidth="16dp"
-                app:tabMinWidth="16dp"
-                app:tabPaddingTop="2dp"
-                app:tabPaddingBottom="2dp"
-                app:tabPaddingStart="4dp"
-                app:tabPaddingEnd="4dp"
+                app:tabMaxWidth="6dp"
+                app:tabMinWidth="6dp"
+                app:tabPaddingTop="0dp"
+                app:tabPaddingBottom="0dp"
+                app:tabPaddingStart="2dp"
+                app:tabPaddingEnd="2dp"
                 app:tabRippleColor="@null" />
 
             <!-- Product Info Container -->
@@ -363,7 +390,7 @@
                                 android:layout_marginStart="8dp"
                                 android:textSize="14sp"
                                 android:textColor="#FF666666"
-                                tools:text="Промокод WOW500\nЗаказ от 3000₽ • до 20.09" />
+                                tools:text="WOW500\nЗаказ от 3000₽ • до 20.09" />
 
                             <View
                                 android:layout_width="0dp"
@@ -476,6 +503,18 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="20dp"
                     android:orientation="vertical">
+                    
+                    <!-- Delivery Method Tabs -->
+                    <com.google.android.material.tabs.TabLayout
+                        android:id="@+id/deliveryMethodTabs"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        app:tabMode="fixed"
+                        app:tabGravity="fill"
+                        app:tabIndicatorColor="@color/black"
+                        app:tabSelectedTextColor="@color/black"
+                        app:tabTextColor="#FF666666" />
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -530,7 +569,7 @@
 
     </androidx.core.widget.NestedScrollView>
 
-    <!-- Bottom Action Buttons - зафиксированы внизу с отступом от навигации -->
+                    <!-- Bottom Action Buttons - зафиксированы внизу с отступом от навигации -->
     <LinearLayout
         android:id="@+id/actionButtonsContainer"
         android:layout_width="match_parent"
@@ -541,6 +580,15 @@
         android:layout_marginBottom="0dp"
         android:background="@color/white"
         android:elevation="8dp">
+        
+        <!-- Payment Method Button -->
+        <Button
+            android:id="@+id/paymentMethodButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Способ оплаты"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/addToCartButton"

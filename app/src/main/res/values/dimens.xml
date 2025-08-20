@@ -18,7 +18,7 @@
     <dimen name="product_card_elevation">2dp</dimen>
     <dimen name="product_card_margin">6dp</dimen>
     <dimen name="product_card_padding">8dp</dimen>
-    <dimen name="catalog_grid_spacing">24dp</dimen>
+    <dimen name="catalog_grid_spacing">4dp</dimen>
     
     <!-- Spacing -->
     <dimen name="spacing_small">8dp</dimen>

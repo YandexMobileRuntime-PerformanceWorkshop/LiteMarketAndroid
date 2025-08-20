@@ -18,21 +18,39 @@ import ru.yandex.speed.workshop.android.domain.models.Product
 
 class ProductPagingAdapter(
     private val onProductClick: (Product) -> Unit,
-    private val onFavoriteClick: (Product) -> Unit
+    private val onFavoriteClick: (String) -> Unit,
+    private val isFavorite: (String) -> Boolean,
 ) : PagingDataAdapter<Product, ProductPagingAdapter.ProductViewHolder>(Diff) {
-
-    object Diff : DiffUtil.ItemCallback<Product>() {
-        override fun areItemsTheSame(oldItem: Product, newItem: Product): Boolean = oldItem.id == newItem.id
-        override fun areContentsTheSame(oldItem: Product, newItem: Product): Boolean = oldItem == newItem
+    companion object {
+        const val VIEW_TYPE_PRODUCT = 0
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ProductViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_product, parent, false)
+    object Diff : DiffUtil.ItemCallback<Product>() {
+        override fun areItemsTheSame(
+            oldItem: Product,
+            newItem: Product,
+        ): Boolean = oldItem.id == newItem.id
+
+        override fun areContentsTheSame(
+            oldItem: Product,
+            newItem: Product,
+        ): Boolean = oldItem == newItem
+    }
+
+    override fun onCreateViewHolder(
+        parent: ViewGroup,
+        viewType: Int,
+    ): ProductViewHolder {
+        val view =
+            LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_product, parent, false)
         return ProductViewHolder(view)
     }
 
-    override fun onBindViewHolder(holder: ProductViewHolder, position: Int) {
+    override fun onBindViewHolder(
+        holder: ProductViewHolder,
+        position: Int,
+    ) {
         getItem(position)?.let { holder.bind(it) }
     }
 
@@ -43,7 +61,8 @@ class ProductPagingAdapter(
         private val productPriceTextView: TextView = itemView.findViewById(R.id.productPriceTextView)
 
         fun bind(product: Product) {
-            val targetWidth = itemView.resources.displayMetrics.widthPixels / 2 - itemView.resources.getDimensionPixelSize(R.dimen.catalog_grid_spacing)
+            val spacing = itemView.resources.getDimensionPixelSize(R.dimen.catalog_grid_spacing)
+            val targetWidth = itemView.resources.displayMetrics.widthPixels / 2 - spacing
             val targetHeight = (targetWidth * 4f / 3f).toInt()
 
             Glide.get(itemView.context).setMemoryCategory(MemoryCategory.HIGH)
@@ -63,25 +82,27 @@ class ProductPagingAdapter(
             productTitleTextView.text = product.title
             productPriceTextView.text = product.price
 
-            updateFavoriteIcon(product, favoriteImageView)
+            updateFavoriteIcon(product.id, favoriteImageView)
 
             itemView.setOnClickListener { onProductClick(product) }
             favoriteImageView.setOnClickListener {
-                product.isFavorite = !product.isFavorite
-                updateFavoriteIcon(product, favoriteImageView)
-                onFavoriteClick(product)
+                onFavoriteClick(product.id)
+                updateFavoriteIcon(product.id, favoriteImageView)
             }
         }
 
-        private fun updateFavoriteIcon(product: Product, favoriteImageView: ImageView) {
-            val favoriteIcon = if (product.isFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart
+        private fun updateFavoriteIcon(
+            productId: String,
+            favoriteImageView: ImageView,
+        ) {
+            val isFav = isFavorite(productId)
+            val favoriteIcon = if (isFav) R.drawable.ic_heart_filled else R.drawable.ic_heart
             favoriteImageView.setImageResource(favoriteIcon)
-            val favoriteColor = if (product.isFavorite) android.R.color.holo_red_dark else android.R.color.darker_gray
-            favoriteImageView.imageTintList = android.content.res.ColorStateList.valueOf(
-                itemView.context.getColor(favoriteColor)
-            )
+            val favoriteColor = if (isFav) android.R.color.holo_red_dark else android.R.color.darker_gray
+            favoriteImageView.imageTintList =
+                android.content.res.ColorStateList.valueOf(
+                    itemView.context.getColor(favoriteColor),
+                )
         }
     }
 }
-
-

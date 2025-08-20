@@ -19,6 +19,7 @@
     <color name="product_price_color">#FF4CAF50</color>
     <color name="background_gray">#FFF5F5F5</color>
     <color name="search_background">#FFEEEEEE</color>
+    <color name="colorPrimary">#FF4CAF50</color>
     
     <!-- Category colors - точно как в iOS -->
     <color name="category_selected_bg">#FF333333</color>

@@ -2,24 +2,37 @@ package ru.yandex.speed.workshop.android.presentation.catalog
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import ru.yandex.speed.workshop.android.data.network.ProductService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import ru.yandex.speed.workshop.android.data.network.ProductApi
 import ru.yandex.speed.workshop.android.domain.models.Product
 
 class ProductsPagingSource(
-    private val service: ProductService,
-    private val query: String?
+    private val api: ProductApi,
+    private val query: String? = null,
+    private val isSearch: Boolean = false,
 ) : PagingSource<Int, Product>() {
-
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, Product> {
         return try {
             val page = params.key ?: 1
             val perPage = params.loadSize
 
-            val response = if (query.isNullOrBlank()) {
-                service.getProductsList(page = page, perPage = perPage)
-            } else {
-                service.searchProducts(query = query, page = page, perPage = perPage)
-            }
+            val response =
+                withContext(Dispatchers.IO) {
+                    try {
+                        if (!isSearch || query.isNullOrBlank()) {
+                            api.getProductsList(page = page, perPage = perPage).execute().body()
+                                ?: throw Exception("Empty response body")
+                        } else {
+                            api.searchProducts(query = query, page = page, perPage = perPage).execute().body()
+                                ?: throw Exception("Empty response body")
+                        }
+                    } catch (e: Exception) {
+                        // Логируем ошибку для отладки
+                        android.util.Log.e("ProductsPagingSource", "API request failed", e)
+                        throw e
+                    }
+                }
 
             val data = response.products
             val nextKey = if (response.hasMore) page + 1 else null
@@ -28,7 +41,7 @@ class ProductsPagingSource(
             LoadResult.Page(
                 data = data,
                 prevKey = prevKey,
-                nextKey = nextKey
+                nextKey = nextKey,
             )
         } catch (e: Exception) {
             LoadResult.Error(e)

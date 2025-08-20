@@ -1,338 +1,286 @@
 package ru.yandex.speed.workshop.android.presentation.catalog
 
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import timber.log.Timber
-import android.widget.*
+import androidx.core.view.isVisible
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
-import androidx.navigation.fragment.findNavController
-import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-import androidx.lifecycle.lifecycleScope
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import androidx.navigation.fragment.findNavController
+import androidx.paging.LoadState
+import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.RecyclerView.RecycledViewPool
+import com.google.android.material.tabs.TabLayout
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import ru.yandex.speed.workshop.android.R
-import ru.yandex.speed.workshop.android.data.network.HttpClient
-import ru.yandex.speed.workshop.android.data.network.ProductService
+import ru.yandex.speed.workshop.android.databinding.FragmentCatalogBinding
 import ru.yandex.speed.workshop.android.domain.models.Product
-import ru.yandex.speed.workshop.android.presentation.common.SnackbarUtils
-import androidx.fragment.app.viewModels
+import timber.log.Timber
+import javax.inject.Inject
 
-/**
- * Fragment каталога товаров (аналог iOS ProductsViewController)
- */
+@AndroidEntryPoint
 class CatalogFragment : Fragment() {
-    
-    companion object {
-        private const val TAG = "CatalogFragment"
-        
-        fun newInstance(): CatalogFragment {
-            return CatalogFragment()
-        }
-    }
-    
-    private lateinit var searchEditText: EditText
-    private lateinit var categoriesRecyclerView: RecyclerView
-    private lateinit var productsRecyclerView: RecyclerView
-    private lateinit var swipeRefreshLayout: SwipeRefreshLayout
-    private lateinit var loadingProgressBar: ProgressBar
-    private lateinit var errorTextView: TextView
-    private lateinit var skeletonView: ProductsListSkeletonView
-    private lateinit var productAdapter: ProductPagingAdapter
-    private lateinit var categoryAdapter: CategoryAdapter
+    private var _binding: FragmentCatalogBinding? = null
+    private val binding get() = checkNotNull(_binding)
 
-    private var searchJob: Job? = null
-    private val categories = listOf("Для вас", "Ниже рынка", "Ultima", "Одежда", "Дом")
-    
-    private val viewModel by viewModels<CatalogViewModel> { CatalogViewModelFactory(requireContext()) }
+    @Inject
+    lateinit var skeletonHelper: SkeletonHelper
+
+    private lateinit var skeletonAdapter: SkeletonHelper.SkeletonAdapter
+
+    private val viewModel: CatalogViewModel by viewModels()
+
+    private val productAdapter by lazy {
+        ProductPagingAdapter(
+            onProductClick = { product -> navigateToProductDetail(product) },
+            onFavoriteClick = { productId -> viewModel.onFavoriteClicked(productId) },
+            isFavorite = { productId -> viewModel.isProductFavorite(productId) },
+        )
+    }
+
+    private val loadStateAdapter by lazy {
+        ProductsLoadStateAdapter { productAdapter.retry() }
+    }
     
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View? {
-        Timber.d("onCreateView called")
-        return inflater.inflate(R.layout.fragment_catalog, container, false)
+        savedInstanceState: Bundle?,
+    ): View {
+        _binding = FragmentCatalogBinding.inflate(inflater, container, false)
+        return binding.root
     }
-    
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        Timber.d("onViewCreated called")
-        
-        initViews(view)
-        initPresenter()
-        setupRecyclerViews()
-        setupSearchBar()
-        setupSwipeRefresh()
-        setupFavoriteResultListener()
 
+    override fun onViewCreated(
+        view: View,
+        savedInstanceState: Bundle?,
+    ) {
+        super.onViewCreated(view, savedInstanceState)
+
+        setupTabs()
+        setupRecyclerView()
+        setupSearch()
+        setupSwipeToRefresh()
+        setupErrorView()
+        setupSkeletonView()
+
+        // Показываем скелетоны при первой загрузке
+            showSkeletons()
+
+        // Подписываемся на изменения в данных
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.productsFlow.collectLatest { pagingData ->
+                viewModel.productsPagingFlow.collectLatest { pagingData ->
                     productAdapter.submitData(pagingData)
                 }
             }
         }
-        setupLoadStateListener()
-        productsRecyclerView.apply {
-            setRecycledViewPool(recycledViewPool)
-            setItemViewCacheSize(12)
+
+        // Подписываемся на изменения в состоянии загрузки
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                productAdapter.loadStateFlow.collectLatest { loadStates ->
+                    // Обновляем UI в зависимости от состояния загрузки
+                    handleLoadStates(loadStates.refresh)
+                }
+            }
+        }
+
+        // Подписываемся на изменения в поисковом запросе
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.searchQuery.collectLatest { query ->
+                    // Устанавливаем текст в поле поиска, если он отличается
+                    if (binding.searchEditText.text.toString() != query) {
+                        binding.searchEditText.setText(query)
+                    }
+                }
+            }
+        }
+
+        // Подписываемся на изменения в избранном
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.favoriteProductsState.collectLatest { favorites ->
+                    // Обновляем адаптер при изменении избранного
+                    productAdapter.notifyDataSetChanged()
+                }
+            }
         }
     }
-    
-    override fun onDestroyView() {
-        super.onDestroyView()
-    }
-    
-    private fun initViews(view: View) {
-        searchEditText = view.findViewById(R.id.searchEditText)
-        categoriesRecyclerView = view.findViewById(R.id.categoriesRecyclerView)
-        productsRecyclerView = view.findViewById(R.id.productsRecyclerView)
-        swipeRefreshLayout = view.findViewById(R.id.swipeRefreshLayout)
-        loadingProgressBar = view.findViewById(R.id.loadingProgressBar)
-        errorTextView = view.findViewById(R.id.errorTextView)
-        skeletonView = view.findViewById(R.id.skeletonView)
-    }
-    
-    private fun initPresenter() {
-        // Оставлено для обратной совместимости
-        // Основная логика теперь в ViewModel
-    }
-    
-    private fun setupRecyclerViews() {
 
-        productAdapter = ProductPagingAdapter(
-            onProductClick = { product ->
+    private fun setupTabs() {
+        // Устанавливаем слушатель для табов
+        binding.tabLayout.addOnTabSelectedListener(
+            object : TabLayout.OnTabSelectedListener {
+                override fun onTabSelected(tab: TabLayout.Tab) {
+                    // Здесь можно добавить логику фильтрации по категории
+                    Timber.d("Selected tab: ${tab.text}")
+                }
 
-                viewModel.onProductClicked(product) { productId ->
-                    navigateToProductDetail(productId)
+                override fun onTabUnselected(tab: TabLayout.Tab) {
+                    // Не требуется действий
+                }
+
+                override fun onTabReselected(tab: TabLayout.Tab) {
+                    // Можно добавить логику для повторного нажатия на таб
                 }
             },
-            onFavoriteClick = { product ->
-                val wasAdded = product.isFavorite
-
-                viewModel.onFavoriteClicked(product)
-                val message = if (wasAdded) "Добавлено в избранное" else "Удалено из избранного"
-                
-
-                SnackbarUtils.showFavoriteAction(
-                    view = requireView(),
-                    message = message,
-                    isAdded = wasAdded,
-                    undoAction = {
-
-                        product.isFavorite = !product.isFavorite
-                        viewModel.updateProductFavoriteStatus(product.id, product.isFavorite)
-                    }
-                )
-            }
         )
-        
-        val gridLayoutManager = GridLayoutManager(requireContext(), 2)
-        
-        productsRecyclerView.apply {
-            layoutManager = gridLayoutManager
-            adapter = productAdapter.withLoadStateFooter(
-                footer = ProductsLoadStateAdapter { productAdapter.retry() }
-            )
-            itemAnimator = null
-        }
-        productsRecyclerView.setHasFixedSize(true)
-        
-
-        categoryAdapter = CategoryAdapter(categories) { category, position ->
-            categoryAdapter.setSelectedPosition(position)
-            // TODO: Implement category filtering
-        }
-        
-        categoriesRecyclerView.apply {
-            layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
-            adapter = categoryAdapter
-        }
     }
-    
-    private fun setupSearchBar() {
-        searchEditText.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-            
-            override fun afterTextChanged(s: Editable?) {
-                val query = s?.toString()?.trim() ?: ""
-                searchJob?.cancel()
-                searchJob = viewLifecycleOwner.lifecycleScope.launch {
-                    delay(300)
-                    viewModel.setQuery(query)
+
+    private fun setupRecyclerView() {
+        val spacing = resources.getDimensionPixelSize(R.dimen.catalog_grid_spacing)
+        val gridLayoutManager = GridLayoutManager(requireContext(), 2)
+
+        // Настраиваем отображение элементов загрузки на всю ширину
+        gridLayoutManager.spanSizeLookup =
+            object : GridLayoutManager.SpanSizeLookup() {
+                override fun getSpanSize(position: Int): Int {
+                    return if (productAdapter.getItemViewType(position) == ProductPagingAdapter.VIEW_TYPE_PRODUCT) 1 else 2
                 }
             }
-        })
+
+        // Создаем общий пул для переиспользования ViewHolder'ов
+        val viewPool =
+            RecycledViewPool().apply {
+                setMaxRecycledViews(ProductPagingAdapter.VIEW_TYPE_PRODUCT, 20)
+            }
+
+        binding.productsRecyclerView.apply {
+            layoutManager = gridLayoutManager
+            setHasFixedSize(true)
+            setRecycledViewPool(viewPool)
+            setItemViewCacheSize(12)
+            itemAnimator = null
+            addItemDecoration(GridSpacingItemDecoration(2, spacing, true))
+            adapter = productAdapter.withLoadStateFooter(loadStateAdapter)
+        }
     }
-    
-    private fun setupSwipeRefresh() {
-        swipeRefreshLayout.setOnRefreshListener {
-            Timber.d("SwipeRefresh triggered")
+
+    private fun setupSearch() {
+        binding.searchEditText.doAfterTextChanged { text ->
+            val query = text.toString().trim()
+            viewModel.updateSearchQuery(query)
+            
+            // Показываем или скрываем кнопку очистки в зависимости от наличия текста
+            binding.searchClearButton.visibility = if (query.isNotEmpty()) View.VISIBLE else View.GONE
+        }
+
+        binding.searchClearButton.setOnClickListener {
+            binding.searchEditText.text?.clear()
+            viewModel.updateSearchQuery("")
+            binding.searchClearButton.visibility = View.GONE
+        }
+    }
+
+    private fun setupSwipeToRefresh() {
+        binding.swipeRefreshLayout.setOnRefreshListener {
             productAdapter.refresh()
         }
     }
-    
 
-    
-
-    
-    fun showLoading(isLoading: Boolean) {
-        Timber.d("showLoading: $isLoading")
-        if (isLoading) {
-            loadingProgressBar.visibility = View.VISIBLE
-            hideError()
-        } else {
-            loadingProgressBar.visibility = View.GONE
-            if (swipeRefreshLayout.isRefreshing) {
-                swipeRefreshLayout.isRefreshing = false
-            }
+    private fun setupErrorView() {
+        binding.errorRetryButton.setOnClickListener {
+            productAdapter.retry()
         }
     }
-    
-    fun showError(message: String) {
-        Timber.e("showError: $message")
-        loadingProgressBar.visibility = View.GONE
-        if (swipeRefreshLayout.isRefreshing) {
-            swipeRefreshLayout.isRefreshing = false
-        }
-        
-        errorTextView.text = message
-        errorTextView.visibility = View.VISIBLE
-    }
-    
-    fun navigateToProductDetail(productId: String) {
-        Timber.d("Navigating to product detail: $productId")
-        try {
-            // Pass existing product data to avoid re-fetching if available
-            val product = getCurrentProductsList().find { it.id == productId }
-            
-            val bundle = Bundle().apply {
-                putString("productId", productId)
-                
-                product?.let { 
-                    putString("productTitle", it.title)
-                    putString("productPrice", it.price)
-                    putString("productOldPrice", it.oldPrice)
-                    putInt("productDiscountPercent", it.discountPercent ?: 0)
-                    putString("productShopName", it.shopName)
-                    putString("productVendor", it.vendor) // Добавляем производителя
-                    putBoolean("isFavorite", it.isFavorite) // Передаем статус избранного
-                    
-                    // Rating data
-                    it.rating?.let { rating ->
-                        putDouble("productRatingScore", rating.score ?: 0.0)
-                        putInt("productRatingReviews", rating.reviewsCount ?: 0)
-                    }
-                    
-                    // Promo code data
-                    it.promoCode?.let { promo ->
-                        putString("promoCode", promo.code)
-                        putString("promoDiscount", promo.discount)
-                        putString("promoMinOrder", promo.minOrder)
-                        putString("promoExpiryDate", promo.expiryDate)
-                    }
-                    
-                    if (it.pictureUrls.isNotEmpty()) {
-                        putStringArrayList("productImages", ArrayList(it.pictureUrls))
-                    }
-                    Timber.d("Passing complete product data: ${it.title}, old_price=${it.oldPrice}, shop=${it.shopName}")
-                } ?: run {
-                    Timber.w("Product not found in current list for ID: $productId")
-                }
-            }
-            
-            findNavController().navigate(R.id.productDetailFragment, bundle)
-        } catch (e: Exception) {
-            Timber.e(e, "Navigation error: ${e.message}")
-            // Navigation errors are critical and should be logged, not shown to user
-        }
-    }
-    
-    private fun hideError() {
-        errorTextView.visibility = View.GONE
-    }
-    
-    private fun showSkeletons() { 
-        loadingProgressBar.visibility = View.GONE
-        swipeRefreshLayout.visibility = View.GONE
-        skeletonView.visibility = View.VISIBLE
-        skeletonView.showSkeletons(6) // Показываем 6 скелетонов
-    }
-    
-    private fun hideSkeletons() { 
-        skeletonView.hideSkeletons()
-        skeletonView.visibility = View.GONE
-        swipeRefreshLayout.visibility = View.VISIBLE
-    }
-    
-    private fun setupFavoriteResultListener() {
-        // Listen for favorite status changes from ProductDetailFragment
-        findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<Bundle>("favorite_result")
-            ?.observe(viewLifecycleOwner) { result ->
-                val productId = result.getString("productId")
-                val isFavorite = result.getBoolean("isFavorite", false)
-                
-                Timber.d("Received favorite result: productId=$productId, isFavorite=$isFavorite")
-                
-                // Update product in ViewModel's data
-                viewModel.updateProductFavoriteStatus(productId, isFavorite)
-                
-                // Clear the result to prevent re-triggering
-                findNavController().currentBackStackEntry?.savedStateHandle?.remove<Bundle>("favorite_result")
-            }
-    }
-    
-        private fun getCurrentProductsList(): List<Product> = productAdapter.snapshot().items
-    
 
+    private fun setupSkeletonView() {
+        skeletonAdapter =
+            skeletonHelper.setupSkeletonRecyclerView(
+                binding.skeletonRecyclerView,
+                requireContext(),
+            )
+    }
+    
+    private fun showSkeletons() {
+        binding.skeletonRecyclerView.isVisible = true
+        skeletonAdapter.skeletonCount = 6
+        skeletonAdapter.notifyDataSetChanged()
+        skeletonHelper.startSkeletonAnimation(binding.skeletonRecyclerView, requireContext())
+    }
+    
+    private fun hideSkeletons() {
+        binding.skeletonRecyclerView.isVisible = false
+        skeletonHelper.stopSkeletonAnimation(binding.skeletonRecyclerView)
+    }
 
-
-    private fun setupLoadStateListener() {
-        productAdapter.addLoadStateListener { loadStates ->
-            val isRefreshing = loadStates.refresh is androidx.paging.LoadState.Loading
-            
-
-            if (isRefreshing) {
+    private fun handleLoadStates(loadState: LoadState) {
+        when (loadState) {
+            is LoadState.Loading -> {
+                // Показываем скелетоны только при первой загрузке
                 if (productAdapter.itemCount == 0) {
                     showSkeletons()
-                } else {
-                    loadingProgressBar.visibility = View.VISIBLE
+                    binding.productsRecyclerView.isVisible = false
+                    binding.errorTextView.isVisible = false
                 }
-            } else {
-                hideSkeletons()
-                loadingProgressBar.visibility = View.GONE
+                binding.swipeRefreshLayout.isRefreshing = productAdapter.itemCount > 0
             }
-            
-
-            if (swipeRefreshLayout.isRefreshing && !isRefreshing) {
-                swipeRefreshLayout.isRefreshing = false
-            }
-
-
-            val errorState = loadStates.refresh as? androidx.paging.LoadState.Error
-                ?: loadStates.append as? androidx.paging.LoadState.Error
-                ?: loadStates.prepend as? androidx.paging.LoadState.Error
-            errorState?.let {
+            is LoadState.Error -> {
                 hideSkeletons()
-                showError(it.error.message ?: "Ошибка загрузки")
+                binding.swipeRefreshLayout.isRefreshing = false
+
+                if (productAdapter.itemCount == 0) {
+                    // Показываем ошибку, только если нет данных
+                    binding.errorTextView.isVisible = true
+                    binding.productsRecyclerView.isVisible = false
+                    binding.errorTextView.text = loadState.error.localizedMessage
+                        ?: getString(R.string.error_loading_products)
+
+                    Timber.e(loadState.error, "Error loading products")
+                } else {
+                    // Если есть данные, показываем snackbar
+                    binding.errorTextView.isVisible = false
+                    binding.productsRecyclerView.isVisible = true
+                }
+            }
+            is LoadState.NotLoading -> {
+                hideSkeletons()
+                binding.swipeRefreshLayout.isRefreshing = false
+                binding.errorTextView.isVisible = false
+                binding.productsRecyclerView.isVisible = true
             }
         }
     }
 
-    private val recycledViewPool = RecyclerView.RecycledViewPool()
+    private fun navigateToProductDetail(product: Product) {
+        try {
+            val navController = findNavController()
+            val action = navController.currentDestination?.getAction(R.id.action_catalog_to_product_detail)
 
- 
-} 
+            if (action != null) {
+                val bundle =
+                    Bundle().apply {
+                        putString("productId", product.id)
+                        putString("productTitle", product.title)
+                        putString("productPrice", product.price)
+                        putString("productOldPrice", product.oldPrice)
+                        putInt("productDiscountPercent", product.discountPercent ?: 0)
+                        putFloat("productRatingScore", (product.rating?.score ?: 0.0).toFloat())
+                        putInt("productRatingReviews", product.rating?.reviewsCount?.toInt() ?: 0)
+                        putString("productVendor", product.manufacturer)
+                        putString("productShopName", product.seller)
+                        putBoolean("isFavorite", viewModel.isProductFavorite(product.id))
+                        putStringArray("productImages", product.images.toTypedArray())
+                    }
+                navController.navigate(R.id.action_catalog_to_product_detail, bundle)
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Error navigating to product detail")
+        }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        hideSkeletons()
+        _binding = null
+    }
+}

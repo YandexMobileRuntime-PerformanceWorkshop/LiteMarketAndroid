@@ -47,6 +47,14 @@
             android:textColorHint="#FF9E9E9E" />
 
         <ImageView
+            android:id="@+id/searchClearButton"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_close"
+            android:visibility="gone"
+            app:tint="@android:color/darker_gray" />
+
+        <ImageView
             android:id="@+id/filterIcon"
             android:layout_width="24dp"
             android:layout_height="24dp"
@@ -55,12 +63,58 @@
 
     </LinearLayout>
 
+    <!-- Tabs for categories -->
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tabLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        app:tabMode="scrollable"
+        app:tabGravity="start"
+        app:tabIndicatorColor="@color/colorPrimary"
+        app:tabSelectedTextColor="@color/colorPrimary"
+        app:tabTextColor="@android:color/darker_gray"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/searchContainer">
+        
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Для вас" />
+            
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Одежда" />
+            
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Электроника" />
+            
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Дом" />
+            
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Детям" />
+            
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Красота" />
+    </com.google.android.material.tabs.TabLayout>
+        
     <!-- Categories RecyclerView - точно как в iOS -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/categoriesRecyclerView"
         android:layout_width="0dp"
         android:layout_height="44dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="8dp"
         android:clipToPadding="false"
         android:orientation="horizontal"
         android:paddingStart="16dp"
@@ -68,7 +122,7 @@
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/searchContainer"
+        app:layout_constraintTop_toBottomOf="@id/tabLayout"
         tools:listitem="@layout/item_category" />
 
     <!-- Products RecyclerView -->
@@ -87,8 +141,8 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
             android:paddingTop="8dp"
             android:paddingBottom="56dp"
             app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
@@ -97,13 +151,18 @@
 
     </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
     
-    <!-- Skeleton View для отображения во время загрузки -->
-    <ru.yandex.speed.workshop.android.presentation.catalog.ProductsListSkeletonView
-        android:id="@+id/skeletonView"
+    <!-- Skeleton RecyclerView для отображения во время загрузки -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/skeletonRecyclerView"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="8dp"
         android:visibility="gone"
+        android:clipToPadding="false"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="56dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -121,20 +180,38 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <!-- Error View -->
-    <TextView
-        android:id="@+id/errorTextView"
+    <LinearLayout
+        android:id="@+id/errorContainer"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="32dp"
         android:layout_marginEnd="32dp"
         android:gravity="center"
-        android:text="Произошла ошибка"
-        android:textSize="16sp"
-        android:textColor="@android:color/black"
+        android:orientation="vertical"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent">
+
+        <TextView
+            android:id="@+id/errorTextView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="Произошла ошибка"
+            android:textSize="16sp"
+            android:textColor="@android:color/black" />
+
+        <Button
+            android:id="@+id/errorRetryButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/retry"
+            android:textColor="@android:color/white"
+            android:backgroundTint="@color/colorPrimary" />
+
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout> 

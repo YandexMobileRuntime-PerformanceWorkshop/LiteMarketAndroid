@@ -22,9 +22,17 @@
         android:label="Product Detail"
         tools:layout="@layout/fragment_product_detail">
         
-        <argument
-            android:name="productId"
-            app:argType="string" />
+        <argument android:name="productId" app:argType="string" />
+        <argument android:name="productTitle" app:argType="string" app:nullable="true" android:defaultValue="null" />
+        <argument android:name="productPrice" app:argType="string" app:nullable="true" android:defaultValue="null" />
+        <argument android:name="productOldPrice" app:argType="string" app:nullable="true" android:defaultValue="null" />
+        <argument android:name="productDiscountPercent" app:argType="integer" android:defaultValue="0" />
+        <argument android:name="productRatingScore" app:argType="float" android:defaultValue="0.0" />
+        <argument android:name="productRatingReviews" app:argType="integer" android:defaultValue="0" />
+        <argument android:name="productVendor" app:argType="string" app:nullable="true" android:defaultValue="null" />
+        <argument android:name="productShopName" app:argType="string" app:nullable="true" android:defaultValue="null" />
+        <argument android:name="isFavorite" app:argType="boolean" android:defaultValue="false" />
+        <argument android:name="productImages" app:argType="string[]" app:nullable="true" android:defaultValue="@null" />
     </fragment>
 
 </navigation> 

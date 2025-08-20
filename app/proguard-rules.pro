@@ -20,29 +20,29 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
-# Keep Gson related classes
--keep class com.google.gson.** { *; }
--keep class * implements com.google.gson.TypeAdapterFactory
--keep class * implements com.google.gson.JsonSerializer
--keep class * implements com.google.gson.JsonDeserializer
-
-# Keep model classes that will be serialized/deserialized by Gson
--keep class ru.yandex.speed.workshop.android.domain.models.** { *; }
-
-# Keep generic signature of retrofit, gson, etc.
--keepattributes Signature
--keepattributes Exceptions
+# Keep attributes needed for reflection and serialization
+-keepattributes Signature, InnerClasses, EnclosingMethod
+-keepattributes RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations
 -keepattributes *Annotation*
+-keepattributes Exceptions
+
+# Keep Kotlinx Serialization
+-keepclassmembers class kotlinx.serialization.json.** { *; }
+-keep class kotlinx.serialization.** { *; }
+
+# Keep Retrofit2 KotlinxSerializationConverter
+-keep class com.jakewharton.retrofit2.converter.kotlinx.serialization.** { *; }
+
+# Keep model classes
+-keep class ru.yandex.speed.workshop.android.domain.models.** { *; }
 
 # Retrofit
 -dontwarn retrofit2.**
 -keep class retrofit2.** { *; }
 
-# OkHttp
+# OkHttp and Okio
 -dontwarn okhttp3.**
--keep class okhttp3.** { *; }
 -dontwarn okio.**
--keep class okio.** { *; }
 
 # Glide
 -keep public class * implements com.bumptech.glide.module.GlideModule
@@ -53,12 +53,6 @@
   **[] $VALUES;
   public *;
 }
--keep class com.bumptech.glide.load.data.ParcelFileDescriptorRewinder$InternalRewinder {
-  *** rewind();
-}
-
-# Paging 3
--keep class androidx.paging.** { *; }
 
 # Coroutines
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}

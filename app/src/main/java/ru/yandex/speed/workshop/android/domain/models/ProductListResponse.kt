@@ -1,17 +1,19 @@
 package ru.yandex.speed.workshop.android.domain.models
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 /**
  * Модель ответа API для списка товаров с пагинацией
  * Соответствует iOS ProductListResponse
  */
+@Serializable
 data class ProductListResponse(
-    val products: List<Product>,
-    @SerializedName("has_more")
-    val hasMore: Boolean,
-    @SerializedName("current_page")
+    val products: List<Product> = emptyList(),
+    @SerialName("has_more")
+    val hasMore: Boolean = false,
+    @SerialName("current_page")
     val currentPage: Int? = null,
     val totalPages: Int? = null,
-    val totalCount: Int? = null
-) 
+    val totalCount: Int? = null,
+)

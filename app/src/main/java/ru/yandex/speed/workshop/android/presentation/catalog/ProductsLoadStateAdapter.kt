@@ -12,15 +12,20 @@ import androidx.recyclerview.widget.RecyclerView
 import ru.yandex.speed.workshop.android.R
 
 class ProductsLoadStateAdapter(
-    private val onRetry: () -> Unit
+    private val onRetry: () -> Unit,
 ) : LoadStateAdapter<ProductsLoadStateAdapter.LoadStateViewHolder>() {
-
-    override fun onCreateViewHolder(parent: ViewGroup, loadState: LoadState): LoadStateViewHolder {
+    override fun onCreateViewHolder(
+        parent: ViewGroup,
+        loadState: LoadState,
+    ): LoadStateViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_loading, parent, false)
         return LoadStateViewHolder(view, onRetry)
     }
 
-    override fun onBindViewHolder(holder: LoadStateViewHolder, loadState: LoadState) {
+    override fun onBindViewHolder(
+        holder: LoadStateViewHolder,
+        loadState: LoadState,
+    ) {
         holder.bind(loadState)
     }
 
@@ -56,5 +61,3 @@ class ProductsLoadStateAdapter(
         }
     }
 }
-
-

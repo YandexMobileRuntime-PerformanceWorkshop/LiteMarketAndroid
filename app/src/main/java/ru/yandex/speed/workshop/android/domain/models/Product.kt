@@ -1,31 +1,33 @@
 package ru.yandex.speed.workshop.android.domain.models
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 /**
  * Модель товара, соответствующая iOS Product struct
  */
+@Serializable
 data class Product(
     val id: String,
     val title: String,
-    @SerializedName("current_price")
-    val currentPrice: String?,
-    @SerializedName("price") 
-    val legacyPrice: String?,
-    @SerializedName("old_price")
-    val oldPrice: String?,
-    @SerializedName("discount_percent")
-    val discountPercent: Int?,
-    @SerializedName("picture_urls")
-    val pictureUrls: List<String>,
-    val vendor: String?,
-    @SerializedName("shop_name")
-    val shopName: String?,
-    val delivery: Delivery?,
-    val promoCode: PromoCode?,
-    val rating: Rating?,
-    @SerializedName("is_favorite")
-    var isFavorite: Boolean = false
+    @SerialName("current_price")
+    val currentPrice: String? = null,
+    @SerialName("price")
+    val legacyPrice: String? = null,
+    @SerialName("old_price")
+    val oldPrice: String? = null,
+    @SerialName("discount_percent")
+    val discountPercent: Int? = null,
+    @SerialName("picture_urls")
+    val pictureUrls: List<String> = emptyList(),
+    val vendor: String? = null,
+    @SerialName("shop_name")
+    val shopName: String? = null,
+    val delivery: Delivery? = null,
+    val promoCode: PromoCode? = null,
+    val rating: Rating? = null,
+    @SerialName("is_favorite")
+    var isFavorite: Boolean = false,
 ) {
     /**
      * Computed property для получения первого URL изображения
@@ -33,10 +35,34 @@ data class Product(
      */
     val url: String?
         get() = pictureUrls.firstOrNull()
-    
+
     /**
      * Computed property для обратной совместимости со старым полем price
      */
     val price: String
         get() = currentPrice ?: legacyPrice ?: "Price not available"
-} 
+
+    /**
+     * Computed property для получения списка изображений
+     */
+    val images: List<String>
+        get() = pictureUrls
+
+    /**
+     * Computed property для получения производителя
+     */
+    val manufacturer: String
+        get() = vendor ?: "Unknown"
+
+    /**
+     * Computed property для получения продавца
+     */
+    val seller: String
+        get() = shopName ?: "Unknown"
+
+    /**
+     * Computed property для получения процента скидки
+     */
+    val discountPercentage: String?
+        get() = discountPercent?.toString()
+}
