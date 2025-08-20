@@ -264,6 +264,7 @@ class CatalogFragment : Fragment() {
                         putString("productPrice", product.currentPrice)
                         putString("productOldPrice", product.oldPrice)
                         putInt("productDiscountPercent", product.discountPercent ?: 0)
+                        // Используем напрямую значение рейтинга без форматирования
                         putFloat("productRatingScore", (product.rating?.score ?: 0.0).toFloat())
                         putInt("productRatingReviews", product.rating?.reviewsCount?.toInt() ?: 0)
                         putString("productVendor", product.manufacturer)

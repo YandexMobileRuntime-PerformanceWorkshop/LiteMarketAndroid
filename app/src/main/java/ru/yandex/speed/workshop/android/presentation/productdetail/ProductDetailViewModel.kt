@@ -166,7 +166,7 @@ class ProductDetailViewModel
                     manufacturer = productVendor,
                     seller = productShopName,
                     rating = ProductRating(
-                        score = String.format("%.1f", productRatingScore).toDouble(),
+                        score = productRatingScore.toDouble(),
                         reviewsCount = productRatingReviews
                     ),
                     isFavorite = _isFavorite.value,
