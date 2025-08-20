@@ -37,13 +37,9 @@ class ProductPricePresenter {
             product.discountPercent != null && product.discountPercent > 0 -> {
                 "${product.discountPercent}%"
             }
-            // Альтернативно используем строковое представление скидки
-            !product.discountPercentage.isNullOrEmpty() && product.discountPercentage.isNotBlank() -> {
-                if (product.discountPercentage.endsWith("%")) {
-                    product.discountPercentage
-                } else {
-                    "${product.discountPercentage}%"
-                }
+            // Нет альтернативного представления в новой структуре
+            false -> {
+                ""
             }
             // Нет скидки
             else -> ""

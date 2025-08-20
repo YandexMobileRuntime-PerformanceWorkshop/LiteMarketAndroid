@@ -19,8 +19,8 @@
     <!-- Форматы -->
     <string name="format_manufacturer_with_arrow">%s ></string>
     <string name="format_discount_percent">%d%%</string>
-    <string name="format_seller_rating">%s • %s</string>
-    <string name="format_promo_code">Промокод %s\n%s • %s</string>
+    <string name="format_seller_rating" formatted="false">%s • %s</string>
+    <string name="format_promo_code" formatted="false">Промокод %s\n%s • %s</string>
     <string name="format_promo_code_simple">Промокод %s</string>
     <string name="format_reviews_count">(%d)</string>
     
