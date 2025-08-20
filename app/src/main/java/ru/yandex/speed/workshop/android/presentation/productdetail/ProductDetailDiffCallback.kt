@@ -14,35 +14,18 @@ class ProductDetailDiffCallback(
      * Проверяет, изменились ли основные данные продукта
      */
     fun hasBasicInfoChanged(): Boolean {
-        // Получаем имя производителя из разных источников
-        val oldManufacturerName = oldItem.manufacturer.name.takeIf { it.isNotEmpty() } ?: oldItem.vendor ?: "Unknown"
-        val newManufacturerName = newItem.manufacturer.name.takeIf { it.isNotEmpty() } ?: newItem.vendor ?: "Unknown"
-        
-        return oldItem.title != newItem.title || oldManufacturerName != newManufacturerName
+        return oldItem.title != newItem.title || oldItem.manufacturer != newItem.manufacturer
     }
 
     /**
      * Проверяет, изменились ли данные о цене
      */
     fun hasPriceInfoChanged(): Boolean {
-        // Проверяем как поля из API, так и вложенный объект price
-        val oldPrice = oldItem.currentPrice ?: oldItem.price.currentPrice
-        val newPrice = newItem.currentPrice ?: newItem.price.currentPrice
-        
-        if (oldPrice != newPrice) {
-            return true
-        }
-        
-        // Проверяем старую цену и скидку
-        if (oldItem.oldPrice != newItem.oldPrice || 
-            oldItem.discountPercent != newItem.discountPercent) {
-            return true
-        }
-        
-        // Проверяем вложенный объект price
-        return oldItem.price.currentPrice != newItem.price.currentPrice ||
-            oldItem.price.oldPrice != newItem.price.oldPrice ||
-            oldItem.price.discountPercentage != newItem.price.discountPercentage
+        // Проверяем цену, старую цену и скидку
+        return oldItem.currentPrice != newItem.currentPrice ||
+            oldItem.oldPrice != newItem.oldPrice ||
+            oldItem.discountPercent != newItem.discountPercent ||
+            oldItem.discountPercentage != newItem.discountPercentage
     }
 
     /**
@@ -50,8 +33,8 @@ class ProductDetailDiffCallback(
      */
     fun hasRatingChanged(): Boolean {
         // Форматируем рейтинг до одного знака после запятой для корректного сравнения
-        val oldScore = oldItem.rating.score?.let { String.format("%.1f", it) }
-        val newScore = newItem.rating.score?.let { String.format("%.1f", it) }
+        val oldScore = oldItem.rating.score.let { String.format("%.1f", it) }
+        val newScore = newItem.rating.score.let { String.format("%.1f", it) }
         
         return oldScore != newScore ||
             oldItem.rating.reviewsCount != newItem.rating.reviewsCount
@@ -61,13 +44,9 @@ class ProductDetailDiffCallback(
      * Проверяет, изменились ли данные о продавце
      */
     fun hasSellerChanged(): Boolean {
-        // Получаем имя продавца из разных источников
-        val oldSellerName = oldItem.seller.name.takeIf { it.isNotEmpty() } ?: oldItem.shopName ?: "Яндекс Фабрика"
-        val newSellerName = newItem.seller.name.takeIf { it.isNotEmpty() } ?: newItem.shopName ?: "Яндекс Фабрика"
-        
-        return oldSellerName != newSellerName ||
-            oldItem.seller.rating != newItem.seller.rating ||
-            oldItem.seller.reviewsCount != newItem.seller.reviewsCount
+        return oldItem.seller != newItem.seller ||
+            oldItem.sellerRating != newItem.sellerRating ||
+            oldItem.sellerReviewsCount != newItem.sellerReviewsCount
     }
 
     /**
@@ -88,31 +67,14 @@ class ProductDetailDiffCallback(
      * Проверяет, изменились ли изображения продукта
      */
     fun hasImagesChanged(): Boolean {
-        // Проверяем изображения в обоих полях: images и picture_urls
-
-        // Сначала определяем списки изображений для сравнения
-        val oldImages =
-            when {
-                oldItem.picture_urls.isNotEmpty() -> oldItem.picture_urls
-                oldItem.images.isNotEmpty() -> oldItem.images
-                else -> emptyList()
-            }
-
-        val newImages =
-            when {
-                newItem.picture_urls.isNotEmpty() -> newItem.picture_urls
-                newItem.images.isNotEmpty() -> newItem.images
-                else -> emptyList()
-            }
-
         // Сначала проверяем размер списков
-        if (oldImages.size != newImages.size) {
+        if (oldItem.imageUrls.size != newItem.imageUrls.size) {
             return true
         }
 
         // Затем проверяем содержимое
-        for (i in oldImages.indices) {
-            if (oldImages[i] != newImages[i]) {
+        for (i in oldItem.imageUrls.indices) {
+            if (oldItem.imageUrls[i] != newItem.imageUrls[i]) {
                 return true
             }
         }
