@@ -1,6 +1,7 @@
 package ru.yandex.speed.workshop.android.presentation.productdetail
 
 import ru.yandex.speed.workshop.android.domain.models.ProductDetail
+import ru.yandex.speed.workshop.android.utils.NumberUtils
 
 /**
  * DiffCallback для сравнения объектов ProductDetail
@@ -33,9 +34,11 @@ class ProductDetailDiffCallback(
      */
     fun hasRatingChanged(): Boolean {
         // Форматируем рейтинг до одного знака после запятой для корректного сравнения
-        val oldScore = oldItem.rating.score.let { String.format("%.1f", it) }
-        val newScore = newItem.rating.score.let { String.format("%.1f", it) }
+        // Используем NumberUtils для форматирования с локалью US, чтобы всегда использовать точку как разделитель
+        val oldScore = NumberUtils.formatDouble(oldItem.rating.score, 1)
+        val newScore = NumberUtils.formatDouble(newItem.rating.score, 1)
         
+        // Сравниваем форматированные строки и количество отзывов
         return oldScore != newScore ||
             oldItem.rating.reviewsCount != newItem.rating.reviewsCount
     }
