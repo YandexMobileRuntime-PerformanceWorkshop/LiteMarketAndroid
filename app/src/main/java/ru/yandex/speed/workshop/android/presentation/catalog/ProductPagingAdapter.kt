@@ -80,7 +80,7 @@ class ProductPagingAdapter(
                 .into(productImageView)
 
             productTitleTextView.text = product.title
-            productPriceTextView.text = product.price
+            productPriceTextView.text = product.currentPrice
 
             updateFavoriteIcon(product.id, favoriteImageView)
 
