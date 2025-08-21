@@ -146,11 +146,18 @@ class ProductRepositoryImpl(
                     val productDto = productResponse.product
                     
                     if (productDto != null) {
+                        // Логируем сырые данные из DTO
+                        Timber.d("Raw DTO data - promoCode: ${productDto.promoCode}")
+                        if (productDto.promoCode != null) {
+                            Timber.d("Raw promoCode details - code: ${productDto.promoCode.code}, discount: ${productDto.promoCode.discount}")
+                        }
+                        
                         val domainProductDetail = productDto.toDomainDetail()
                         
                         // Логируем полученные данные для отладки
                         Timber.d("Product detail received: id=${domainProductDetail.id}, title=${domainProductDetail.title}")
                         Timber.d("Images count: ${domainProductDetail.imageUrls.size}")
+                        Timber.d("PromoCode: ${domainProductDetail.promoCode?.code}, discount: ${domainProductDetail.promoCode?.discount}")
 
                         // Кэшируем полученную модель
                         detailCache.put(id, domainProductDetail)

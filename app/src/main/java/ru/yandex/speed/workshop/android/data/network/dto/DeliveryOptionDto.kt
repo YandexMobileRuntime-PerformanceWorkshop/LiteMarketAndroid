@@ -12,6 +12,5 @@ data class DeliveryOptionDto(
     val date: String? = null,
     val details: String? = null,
     
-    @SerialName("is_selected")
     val isSelected: Boolean? = null
 )

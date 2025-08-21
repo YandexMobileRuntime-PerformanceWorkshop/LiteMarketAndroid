@@ -30,10 +30,9 @@ data class ProductDto(
     
     val rating: RatingDto? = null,
     
-    @SerialName("is_favorite")
     val isFavorite: Boolean = false,
     
-    @SerialName("promo_code")
+    @SerialName("promoCode")
     val promoCode: PromoCodeDto? = null,
     
     val delivery: DeliveryDto? = null,

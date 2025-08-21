@@ -4,6 +4,7 @@ import android.content.Context
 import ru.yandex.speed.workshop.android.R
 import ru.yandex.speed.workshop.android.domain.models.ProductDetail
 import ru.yandex.speed.workshop.android.domain.models.PromoCode
+import timber.log.Timber
 
 /**
  * Презентер для работы с основной информацией о продукте
@@ -88,12 +89,16 @@ class ProductInfoPresenter(private val context: Context) {
      */
     fun formatPromoCode(product: ProductDetail): PromoCodeInfo {
         return product.promoCode?.let { promo ->
+            Timber.d("Using real promo code: ${promo.code}, discount: ${promo.discount}")
             formatPromoCodeData(promo)
-        } ?: PromoCodeInfo(
-            discountText = "",
-            codeText = "",
-            hasPromoCode = false // Не показываем промокод, если он отсутствует
-        )
+        } ?: run {
+            Timber.d("Using default promo code")
+            PromoCodeInfo(
+                discountText = context.getString(R.string.default_promo_discount),
+                codeText = context.getString(R.string.default_promo_code),
+                hasPromoCode = true
+            )
+        }
     }
     
     private fun formatPromoCodeData(promo: PromoCode): PromoCodeInfo {
