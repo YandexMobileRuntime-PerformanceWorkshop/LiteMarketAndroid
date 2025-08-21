@@ -8,7 +8,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class RatingDto(
     val score: Double = 0.0,
-    
     // Поле в ответе от сервера называется "reviewsCount", а не "reviews_count"
-    val reviewsCount: Int = 0
+    val reviewsCount: Int = 0,
 )

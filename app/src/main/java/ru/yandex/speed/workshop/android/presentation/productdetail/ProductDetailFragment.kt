@@ -36,13 +36,13 @@ class ProductDetailFragment : Fragment() {
 
     @Inject
     lateinit var imageLoader: ImageLoader
-    
+
     @Inject
     lateinit var mviScreenAnalytics: MVIScreenAnalytics
 
     private var _binding: FragmentProductDetailBinding? = null
     private val binding get() = _binding!!
-    
+
     // Флаг первой загрузки контента (для отслеживания LCP)
     private var isFirstContentLoad = true
 
@@ -58,7 +58,7 @@ class ProductDetailFragment : Fragment() {
     // Состояние избранного
     private var isFavorite: Boolean = false
     private var isSellerFavorite: Boolean = false
-    
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -73,16 +73,16 @@ class ProductDetailFragment : Fragment() {
         savedInstanceState: Bundle?,
     ) {
         super.onViewCreated(view, savedInstanceState)
-        
+
         // Инициализация презентеров
         pricePresenter = ProductPricePresenter()
         imagePresenter = ProductImagePresenter()
         infoPresenter = ProductInfoPresenter(requireContext())
-        
+
         // Инициализация контейнеров
         contentContainer = binding.contentContainer
         skeletonContainer = binding.skeletonContainer
-        
+
         // Инициализация MVIScreenAnalytics для трекинга LCP
         initializeLCPTracking()
 
@@ -99,28 +99,28 @@ class ProductDetailFragment : Fragment() {
             findNavController().navigateUp()
         }
     }
-    
+
     /**
      * Инициализация трекинга LCP на основе переданных аргументов
      */
     private fun initializeLCPTracking() {
         // Получаем timestamp создания экрана из аргументов, если есть
         val screenCreationTimestamp = arguments?.getLong("screen_creation_timestamp", 0L)
-        
+
         if (screenCreationTimestamp != null && screenCreationTimestamp > 0L) {
             // Создаем timestamp из сохраненного времени (в миллисекундах)
             val timestamp = PerformanceTimestamp.fromMilliseconds(screenCreationTimestamp)
             Timber.d("Initializing LCP tracking from screen creation: $screenCreationTimestamp ms")
             mviScreenAnalytics.initialize(
                 trackingTimeType = LCPTrackingTime.FROM_SCREEN_CREATION,
-                creationTimestamp = timestamp
+                creationTimestamp = timestamp,
             )
         } else {
             // Инициализируем трекинг от старта приложения
             Timber.d("Initializing LCP tracking from app start")
             mviScreenAnalytics.initialize(trackingTimeType = LCPTrackingTime.FROM_APP_START)
         }
-        
+
         // Сбрасываем флаг первой загрузки
         isFirstContentLoad = true
     }
@@ -129,24 +129,25 @@ class ProductDetailFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
-    
+
     private fun setupButtons() {
         // Кнопка возврата
         binding.backButton.setOnClickListener {
             findNavController().navigateUp()
         }
-        
+
         // Кнопка избранного для продукта
         binding.favoriteButton.setOnClickListener {
             isFavorite = !isFavorite
             viewModel.setFavorite(isFavorite)
             updateFavoriteButton()
-            
-            val message = if (isFavorite) {
-                getString(R.string.message_product_added_to_favorites)
-            } else {
-                getString(R.string.message_product_removed_from_favorites)
-            }
+
+            val message =
+                if (isFavorite) {
+                    getString(R.string.message_product_added_to_favorites)
+                } else {
+                    getString(R.string.message_product_removed_from_favorites)
+                }
 
             SnackbarUtils.showFavoriteAction(
                 view = requireView(),
@@ -159,23 +160,24 @@ class ProductDetailFragment : Fragment() {
                 },
             )
         }
-        
+
         // Кнопка поделиться
         binding.shareButton.setOnClickListener {
             Timber.d("Share button clicked")
             SnackbarUtils.showPlaceholder(requireView(), getString(R.string.message_share_product))
         }
-        
+
         // Кнопка избранного для продавца
         binding.sellerFavoriteButton.setOnClickListener {
             isSellerFavorite = !isSellerFavorite
             updateSellerFavoriteButton()
-            
-            val message = if (isSellerFavorite) {
-                getString(R.string.message_seller_added_to_favorites)
-            } else {
-                getString(R.string.message_seller_removed_from_favorites)
-            }
+
+            val message =
+                if (isSellerFavorite) {
+                    getString(R.string.message_seller_added_to_favorites)
+                } else {
+                    getString(R.string.message_seller_removed_from_favorites)
+                }
 
             SnackbarUtils.showFavoriteAction(
                 view = requireView(),
@@ -187,13 +189,13 @@ class ProductDetailFragment : Fragment() {
                 },
             )
         }
-        
+
         // Кнопка деталей продавца
         binding.sellerDetailsButton.setOnClickListener {
             Timber.d("Seller details button clicked")
             SnackbarUtils.showPlaceholder(requireView(), getString(R.string.message_open_seller_page))
         }
-        
+
         // Кнопка выбора способа оплаты
         binding.paymentMethodButton.setOnClickListener {
             Timber.d("Payment method button clicked")
@@ -203,16 +205,16 @@ class ProductDetailFragment : Fragment() {
 
     private fun updateFavoriteButton() {
         binding.favoriteButton.setImageResource(
-            if (isFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart
+            if (isFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart,
         )
     }
 
     private fun updateSellerFavoriteButton() {
         binding.sellerFavoriteButton.setImageResource(
-            if (isSellerFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart
+            if (isSellerFavorite) R.drawable.ic_heart_filled else R.drawable.ic_heart,
         )
     }
-    
+
     private fun loadProductDetail(productId: String) {
         Timber.d("Loading product detail for ID: $productId")
 
@@ -273,7 +275,7 @@ class ProductDetailFragment : Fragment() {
                             // Если есть данные из каталога, показываем их, но уведомляем о проблеме с обновлением
                             SnackbarUtils.showError(
                                 requireView(),
-                                getString(R.string.error_failed_to_update, state.message)
+                                getString(R.string.error_failed_to_update, state.message),
                             )
                         }
                     }
@@ -289,11 +291,11 @@ class ProductDetailFragment : Fragment() {
             }
         }
     }
-    
+
     private fun tryGetImagesFromCatalog(productId: String): List<String>? {
         return try {
             val productImages = arguments?.getStringArray("productImages")
-            
+
             if (arguments?.getString("productTitle") != null && productImages != null) {
                 Timber.d("Using complete product data from arguments: ${arguments?.getString("productTitle")}")
                 productImages.toList()
@@ -317,7 +319,7 @@ class ProductDetailFragment : Fragment() {
         if (currentProductDetail == null) {
             updateAllProductDetails(productDetail)
             currentProductDetail = productDetail
-            
+
             // Если это первая загрузка контента, логируем LCP
             if (isFirstContentLoad) {
                 isFirstContentLoad = false
@@ -379,73 +381,73 @@ class ProductDetailFragment : Fragment() {
             setupGallery(galleryImages.imageUrls)
         }
     }
-    
+
     /**
      * Обновляет основную информацию о продукте
      */
     private fun updateBasicInfo(productDetail: ProductDetail) {
         val basicInfo = infoPresenter.formatBasicInfo(productDetail)
-        
+
         binding.manufacturerText.setTextIfChanged(basicInfo.manufacturerFormatted)
         binding.productTitle.setTextIfChanged(basicInfo.title)
     }
-    
+
     /**
      * Обновляет информацию о цене и скидках
      */
     private fun updatePriceInfo(productDetail: ProductDetail) {
         val priceInfo = pricePresenter.formatPrice(productDetail)
-        
+
         // Устанавливаем текущую цену
         binding.currentPriceText.setTextIfChanged(priceInfo.currentPrice)
-        
+
         // Устанавливаем старую цену с перечеркиванием если она есть
         binding.oldPriceText.setStrikeThroughText(
             text = priceInfo.oldPrice,
-            isVisible = priceInfo.showOldPrice
+            isVisible = priceInfo.showOldPrice,
         )
-        
+
         // Устанавливаем текст скидки если она есть
         binding.discountText.setTextIfChanged(priceInfo.discountText)
         binding.discountText.setVisibleIf(priceInfo.showDiscount)
     }
-    
+
     /**
      * Обновляет информацию о рейтинге
      */
     private fun updateRatingInfo(productDetail: ProductDetail) {
         val ratingInfo = infoPresenter.formatRating(productDetail)
-        
+
         binding.ratingText.setTextIfChanged(ratingInfo.formattedRating)
         binding.reviewsCountText.setTextIfChanged(ratingInfo.formattedReviewsCount)
     }
-    
+
     /**
      * Обновляет информацию о продавце
      */
     private fun updateSellerInfo(productDetail: ProductDetail) {
         val sellerInfo = infoPresenter.formatSellerInfo(productDetail)
-        
+
         binding.sellerNameText.setTextIfChanged(sellerInfo.name)
         binding.sellerRatingText.setTextIfChanged(sellerInfo.rating)
     }
-    
+
     /**
      * Обновляет информацию о промокоде
      */
     private fun updatePromoCode(productDetail: ProductDetail) {
         val promoInfo = infoPresenter.formatPromoCode(productDetail)
-        
+
         binding.promoDiscountText.setTextIfChanged(promoInfo.discountText)
         binding.promoCodeText.setTextIfChanged(promoInfo.codeText)
-        
+
         binding.promoDiscountText.setVisibleIf(promoInfo.hasPromoCode)
         binding.promoCodeText.setVisibleIf(promoInfo.hasPromoCode)
     }
-    
+
     private fun setupGallery(imageUrls: List<String>) {
         Timber.d("Setting up gallery with ${imageUrls.size} images")
-        
+
         // Always setup gallery, even if empty
         val galleryAdapter = ProductGalleryAdapter(requireContext(), imageLoader)
         binding.productGallery.adapter = galleryAdapter
@@ -468,7 +470,7 @@ class ProductDetailFragment : Fragment() {
         tabLayout.addTab(deliveryTab)
         tabLayout.addTab(pickupTab)
     }
-    
+
     private fun showSkeleton() {
         Timber.d("Showing skeleton")
         skeletonContainer.visibility = View.VISIBLE

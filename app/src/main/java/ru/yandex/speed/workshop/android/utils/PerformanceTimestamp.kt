@@ -15,7 +15,7 @@ class PerformanceTimestamp constructor(private val nanoTime: Long) {
         fun now(): PerformanceTimestamp {
             return PerformanceTimestamp(SystemClock.elapsedRealtimeNanos())
         }
-        
+
         /**
          * Создать временную метку из сохраненного значения в миллисекундах
          */
@@ -26,7 +26,7 @@ class PerformanceTimestamp constructor(private val nanoTime: Long) {
 
         // Статическая переменная для хранения метки времени старта приложения
         private var appStartTimestamp: PerformanceTimestamp? = null
-        
+
         /**
          * Инициализировать временную метку старта приложения
          * Должен вызываться как можно раньше в Application.onCreate()
@@ -36,7 +36,7 @@ class PerformanceTimestamp constructor(private val nanoTime: Long) {
                 appStartTimestamp = now()
             }
         }
-        
+
         /**
          * Получить временную метку старта процесса
          */
@@ -61,7 +61,7 @@ class PerformanceTimestamp constructor(private val nanoTime: Long) {
     fun toMilliseconds(): Long {
         return TimeUnit.NANOSECONDS.toMillis(nanoTime)
     }
-    
+
     /**
      * Получить временную метку в формате Unix time (секунды с 1970)
      * Аналог toSince1970() из iOS

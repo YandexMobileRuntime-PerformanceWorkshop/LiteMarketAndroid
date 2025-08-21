@@ -4,9 +4,9 @@ import ru.yandex.speed.workshop.android.data.network.dto.ProductDto
 import ru.yandex.speed.workshop.android.domain.models.Delivery
 import ru.yandex.speed.workshop.android.domain.models.DeliveryOption
 import ru.yandex.speed.workshop.android.domain.models.Product
-import ru.yandex.speed.workshop.android.domain.models.ProductDetail
 import ru.yandex.speed.workshop.android.domain.models.ProductDelivery
 import ru.yandex.speed.workshop.android.domain.models.ProductDeliveryOption
+import ru.yandex.speed.workshop.android.domain.models.ProductDetail
 import ru.yandex.speed.workshop.android.domain.models.ProductRating
 import ru.yandex.speed.workshop.android.domain.models.PromoCode
 import ru.yandex.speed.workshop.android.domain.models.Rating
@@ -24,34 +24,38 @@ fun ProductDto.toDomain(): Product {
         imageUrls = pictureUrls,
         manufacturer = vendor ?: "Unknown",
         seller = shopName ?: "Unknown",
-        rating = rating?.let {
-            Rating(
-                score = it.score,
-                reviewsCount = it.reviewsCount
-            )
-        },
+        rating =
+            rating?.let {
+                Rating(
+                    score = it.score,
+                    reviewsCount = it.reviewsCount,
+                )
+            },
         isFavorite = isFavorite,
-        promoCode = promoCode?.let {
-            PromoCode(
-                code = it.code,
-                discount = it.discount,
-                minOrder = it.minOrder,
-                expiryDate = it.expiryDate
-            )
-        },
-        delivery = delivery?.let {
-            Delivery(
-                provider = it.provider ?: "",
-                options = it.options?.map { option ->
-                    DeliveryOption(
-                        type = option.type ?: "",
-                        date = option.date ?: "",
-                        details = option.details ?: "",
-                        isSelected = option.isSelected ?: false
-                    )
-                } ?: emptyList()
-            )
-        }
+        promoCode =
+            promoCode?.let {
+                PromoCode(
+                    code = it.code,
+                    discount = it.discount,
+                    minOrder = it.minOrder,
+                    expiryDate = it.expiryDate,
+                )
+            },
+        delivery =
+            delivery?.let {
+                Delivery(
+                    provider = it.provider ?: "",
+                    options =
+                        it.options?.map { option ->
+                            DeliveryOption(
+                                type = option.type ?: "",
+                                date = option.date ?: "",
+                                details = option.details ?: "",
+                                isSelected = option.isSelected ?: false,
+                            )
+                        } ?: emptyList(),
+                )
+            },
     )
 }
 
@@ -68,35 +72,39 @@ fun ProductDto.toDomainDetail(): ProductDetail {
         imageUrls = pictureUrls,
         manufacturer = vendor ?: "Unknown",
         seller = shopName ?: "Unknown",
-        rating = ProductRating(
-            score = rating?.score ?: 0.0,
-            reviewsCount = rating?.reviewsCount ?: 0
-        ),
+        rating =
+            ProductRating(
+                score = rating?.score ?: 0.0,
+                reviewsCount = rating?.reviewsCount ?: 0,
+            ),
         isFavorite = isFavorite,
-        promoCode = promoCode?.let {
-            PromoCode(
-                code = it.code,
-                discount = it.discount,
-                minOrder = it.minOrder,
-                expiryDate = it.expiryDate
-            )
-        },
-        delivery = ProductDelivery(
-            provider = delivery?.provider ?: "",
-            options = delivery?.options?.map {
-                ProductDeliveryOption(
-                    type = it.type ?: "",
-                    date = it.date ?: "",
-                    details = it.details ?: "",
-                    isSelected = it.isSelected ?: false
+        promoCode =
+            promoCode?.let {
+                PromoCode(
+                    code = it.code,
+                    discount = it.discount,
+                    minOrder = it.minOrder,
+                    expiryDate = it.expiryDate,
                 )
-            } ?: emptyList()
-        ),
+            },
+        delivery =
+            ProductDelivery(
+                provider = delivery?.provider ?: "",
+                options =
+                    delivery?.options?.map {
+                        ProductDeliveryOption(
+                            type = it.type ?: "",
+                            date = it.date ?: "",
+                            details = it.details ?: "",
+                            isSelected = it.isSelected ?: false,
+                        )
+                    } ?: emptyList(),
+            ),
         paymentMethod = paymentMethod ?: "",
         alternativePrice = alternativePrice,
         sellerLogo = sellerLogo ?: "",
         sellerRating = sellerRating ?: 0.0,
         sellerReviewsCount = sellerReviewsCount ?: "",
-        isSellerFavorite = isSellerFavorite ?: false
+        isSellerFavorite = isSellerFavorite ?: false,
     )
 }

@@ -48,12 +48,12 @@ class ProductRepositoryImpl(
 
             // Если нет в кэше, загружаем с API
             val result = api.getProductsList(page, perPage).safeExecute()
-            
+
             // Обрабатываем результат
             return@withContext when (result) {
                 is Result.Success -> {
                     val data = result.data
-                    
+
                     // Кэшируем список
                     listCache[cacheKey] = data
 
@@ -62,7 +62,7 @@ class ProductRepositoryImpl(
                         val product = productDto.toDomain()
                         productCache.put(product.id, product)
                     }
-                    
+
                     result
                 }
                 is Result.Error -> {
@@ -88,12 +88,12 @@ class ProductRepositoryImpl(
 
             // Если нет в кэше, загружаем с API
             val result = api.searchProducts(query, page, perPage).safeExecute()
-            
+
             // Обрабатываем результат
             return@withContext when (result) {
                 is Result.Success -> {
                     val data = result.data
-                    
+
                     // Кэшируем список
                     listCache[cacheKey] = data
 
@@ -102,7 +102,7 @@ class ProductRepositoryImpl(
                         val product = productDto.toDomain()
                         productCache.put(product.id, product)
                     }
-                    
+
                     result
                 }
                 is Result.Error -> {
@@ -139,21 +139,23 @@ class ProductRepositoryImpl(
 
             // Если нет в кэше, загружаем с API
             val result = api.getProductDetail(id).safeExecute()
-            
+
             return@withContext when (result) {
                 is Result.Success -> {
                     val productResponse = result.data
                     val productDto = productResponse.product
-                    
+
                     if (productDto != null) {
                         // Логируем сырые данные из DTO
                         Timber.d("Raw DTO data - promoCode: ${productDto.promoCode}")
                         if (productDto.promoCode != null) {
-                            Timber.d("Raw promoCode details - code: ${productDto.promoCode.code}, discount: ${productDto.promoCode.discount}")
+                            Timber.d(
+                                "Raw promoCode details - code: ${productDto.promoCode.code}, discount: ${productDto.promoCode.discount}",
+                            )
                         }
-                        
+
                         val domainProductDetail = productDto.toDomainDetail()
-                        
+
                         // Логируем полученные данные для отладки
                         Timber.d("Product detail received: id=${domainProductDetail.id}, title=${domainProductDetail.title}")
                         Timber.d("Images count: ${domainProductDetail.imageUrls.size}")

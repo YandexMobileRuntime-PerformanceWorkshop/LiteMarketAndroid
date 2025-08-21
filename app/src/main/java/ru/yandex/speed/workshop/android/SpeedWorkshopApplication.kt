@@ -14,14 +14,14 @@ class SpeedWorkshopApplication : Application() {
         // Инициализация метки времени старта приложения
         // Важно вызвать ДО super.onCreate()
         PerformanceTimestamp.initializeAppStart()
-        
+
         super.onCreate()
 
         // Инициализация Timber для логирования
         Timber.plant(Timber.DebugTree())
 
         // ImageLoader инициализируется автоматически через Hilt
-        
+
         Timber.i("Application initialized at ${System.currentTimeMillis()}")
     }
 }

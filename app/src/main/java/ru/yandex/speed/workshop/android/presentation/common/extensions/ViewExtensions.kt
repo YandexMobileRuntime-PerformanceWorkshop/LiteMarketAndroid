@@ -27,7 +27,10 @@ fun TextView.setTextIfChanged(newText: String?) {
  * @param condition Условие, при котором View должен быть видимым
  * @param invisibilityState Состояние невидимости (View.GONE или View.INVISIBLE)
  */
-fun View.setVisibleIf(condition: Boolean, invisibilityState: Int = View.GONE) {
+fun View.setVisibleIf(
+    condition: Boolean,
+    invisibilityState: Int = View.GONE,
+) {
     visibility = if (condition) View.VISIBLE else invisibilityState
 }
 
@@ -40,11 +43,14 @@ fun TextView.setStrikeThrough() {
 
 /**
  * Устанавливает перечеркнутый стиль текста и видимость в зависимости от условия
- * 
+ *
  * @param text Текст для отображения
  * @param isVisible Условие для отображения
  */
-fun TextView.setStrikeThroughText(text: String?, isVisible: Boolean) {
+fun TextView.setStrikeThroughText(
+    text: String?,
+    isVisible: Boolean,
+) {
     if (isVisible && !text.isNullOrEmpty()) {
         setTextIfChanged(text)
         setStrikeThrough()

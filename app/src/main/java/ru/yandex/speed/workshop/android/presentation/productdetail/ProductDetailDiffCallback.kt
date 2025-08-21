@@ -37,7 +37,7 @@ class ProductDetailDiffCallback(
         // Используем NumberUtils для форматирования с локалью US, чтобы всегда использовать точку как разделитель
         val oldScore = NumberUtils.formatDouble(oldItem.rating.score, 1)
         val newScore = NumberUtils.formatDouble(newItem.rating.score, 1)
-        
+
         // Сравниваем форматированные строки и количество отзывов
         return oldScore != newScore ||
             oldItem.rating.reviewsCount != newItem.rating.reviewsCount

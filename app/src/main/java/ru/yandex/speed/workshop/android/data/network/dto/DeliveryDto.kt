@@ -8,5 +8,5 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class DeliveryDto(
     val provider: String? = null,
-    val options: List<DeliveryOptionDto>? = null
+    val options: List<DeliveryOptionDto>? = null,
 )

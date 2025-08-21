@@ -14,6 +14,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.paging.LoadState
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.RecycledViewPool
 import com.google.android.material.tabs.TabLayout
 import dagger.hilt.android.AndroidEntryPoint
@@ -24,6 +25,7 @@ import ru.yandex.speed.workshop.android.databinding.FragmentCatalogBinding
 import ru.yandex.speed.workshop.android.domain.models.Product
 import ru.yandex.speed.workshop.android.utils.LCPTrackingTime
 import ru.yandex.speed.workshop.android.utils.MVIScreenAnalytics
+import ru.yandex.speed.workshop.android.utils.PerformanceMetricManager
 import ru.yandex.speed.workshop.android.utils.PerformanceTimestamp
 import timber.log.Timber
 import javax.inject.Inject
@@ -35,12 +37,15 @@ class CatalogFragment : Fragment() {
 
     @Inject
     lateinit var skeletonHelper: SkeletonHelper
-    
+
     @Inject
     lateinit var mviScreenAnalytics: MVIScreenAnalytics
 
+    @Inject
+    lateinit var performanceMetricManager: PerformanceMetricManager
+
     private lateinit var skeletonAdapter: SkeletonHelper.SkeletonAdapter
-    
+
     // Флаг для отслеживания первой успешной загрузки данных (для LCP)
     private var isFirstSuccessfulLoad = true
 
@@ -57,7 +62,7 @@ class CatalogFragment : Fragment() {
     private val loadStateAdapter by lazy {
         ProductsLoadStateAdapter { productAdapter.retry() }
     }
-    
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -75,7 +80,7 @@ class CatalogFragment : Fragment() {
 
         // Инициализируем LCP трекинг для экрана каталога
         initLCPTracking()
-        
+
         setupTabs()
         setupRecyclerView()
         setupSearch()
@@ -85,7 +90,7 @@ class CatalogFragment : Fragment() {
 
         // Показываем скелетоны при первой загрузке
         showSkeletons()
-        
+
         // Сбрасываем флаг первой загрузки для правильного измерения LCP
         isFirstSuccessfulLoad = true
 
@@ -177,6 +182,29 @@ class CatalogFragment : Fragment() {
             itemAnimator = null
             addItemDecoration(GridSpacingItemDecoration(2, spacing, true))
             adapter = productAdapter.withLoadStateFooter(loadStateAdapter)
+
+            // Добавляем слушатель скролла для измерения производительности
+            addOnScrollListener(
+                object : RecyclerView.OnScrollListener() {
+                    override fun onScrollStateChanged(
+                        recyclerView: RecyclerView,
+                        newState: Int,
+                    ) {
+                        when (newState) {
+                            RecyclerView.SCROLL_STATE_DRAGGING -> {
+                                // Начало скролла - запускаем измерение
+                                performanceMetricManager.start(measureName = "catalog_scroll")
+                                Timber.d("Scroll started - measuring performance")
+                            }
+                            RecyclerView.SCROLL_STATE_IDLE -> {
+                                // Окончание скролла без инерции или после инерции
+                                performanceMetricManager.stop(name = "catalog_scroll")
+                                Timber.d("Scroll ended - measuring performance complete")
+                            }
+                        }
+                    }
+                },
+            )
         }
     }
 
@@ -184,7 +212,7 @@ class CatalogFragment : Fragment() {
         binding.searchEditText.doAfterTextChanged { text ->
             val query = text.toString().trim()
             viewModel.updateSearchQuery(query)
-            
+
             // Показываем или скрываем кнопку очистки в зависимости от наличия текста
             binding.searchClearButton.visibility = if (query.isNotEmpty()) View.VISIBLE else View.GONE
         }
@@ -207,7 +235,7 @@ class CatalogFragment : Fragment() {
             productAdapter.retry()
         }
     }
-    
+
     /**
      * Инициализация трекинга LCP для экрана каталога
      */
@@ -225,14 +253,14 @@ class CatalogFragment : Fragment() {
                 requireContext(),
             )
     }
-    
+
     private fun showSkeletons() {
         binding.skeletonRecyclerView.isVisible = true
         skeletonAdapter.skeletonCount = 6
         skeletonAdapter.notifyDataSetChanged()
         skeletonHelper.startSkeletonAnimation(binding.skeletonRecyclerView, requireContext())
     }
-    
+
     private fun hideSkeletons() {
         binding.skeletonRecyclerView.isVisible = false
         skeletonHelper.stopSkeletonAnimation(binding.skeletonRecyclerView)
@@ -272,14 +300,14 @@ class CatalogFragment : Fragment() {
                 binding.swipeRefreshLayout.isRefreshing = false
                 binding.errorTextView.isVisible = false
                 binding.productsRecyclerView.isVisible = true
-                
+
                 // Если это первая успешная загрузка данных и у нас есть элементы для отображения
                 if (isFirstSuccessfulLoad && productAdapter.itemCount > 0) {
                     isFirstSuccessfulLoad = false
                     // Логируем LCP, так как первая загрузка каталога завершена
                     Timber.d("Logging LCP for catalog screen with ${productAdapter.itemCount} items loaded")
                     mviScreenAnalytics.logLCP("Catalog")
-                    
+
                     // Дополнительное логирование для удобства тестирования
                     val productIds = mutableListOf<String>()
                     for (i in 0 until minOf(3, productAdapter.itemCount)) {
@@ -304,7 +332,7 @@ class CatalogFragment : Fragment() {
                 // Создаем временную метку для измерения LCP
                 val timestamp = PerformanceTimestamp.now()
                 Timber.d("Creating timestamp for LCP tracking: ${timestamp.toMilliseconds()}")
-                
+
                 val bundle =
                     Bundle().apply {
                         putString("productId", product.id)
@@ -319,10 +347,10 @@ class CatalogFragment : Fragment() {
                         putString("productShopName", product.seller)
                         putBoolean("isFavorite", viewModel.isProductFavorite(product.id))
                         putStringArray("productImages", product.imageUrls.toTypedArray())
-                        
+
                         // Добавляем временную метку для LCP трекинга
                         putLong("screen_creation_timestamp", timestamp.toMilliseconds())
-                        
+
                         // Добавляем информацию о промокоде, если он есть
                         product.promoCode?.let { promoCode ->
                             putString("promoCode", promoCode.code)
@@ -330,7 +358,7 @@ class CatalogFragment : Fragment() {
                             putString("promoMinOrder", promoCode.minOrder)
                             putString("promoExpiryDate", promoCode.expiryDate)
                         }
-                        
+
                         // Добавляем информацию о доставке, если она есть
                         product.delivery?.let { delivery ->
                             putString("deliveryProvider", delivery.provider)

@@ -10,7 +10,6 @@ import timber.log.Timber
  * Презентер для работы с основной информацией о продукте
  */
 class ProductInfoPresenter(private val context: Context) {
-    
     /**
      * Форматирует основную информацию о продукте
      *
@@ -18,18 +17,20 @@ class ProductInfoPresenter(private val context: Context) {
      * @return Отформатированная основная информация
      */
     fun formatBasicInfo(product: ProductDetail): BasicProductInfo {
-        val manufacturerName = product.manufacturer.takeIf { it.isNotEmpty() } 
-            ?: context.getString(R.string.unknown_manufacturer)
-            
+        val manufacturerName =
+            product.manufacturer.takeIf { it.isNotEmpty() }
+                ?: context.getString(R.string.unknown_manufacturer)
+
         return BasicProductInfo(
             title = product.title,
-            manufacturerFormatted = context.getString(
-                R.string.format_manufacturer_with_arrow,
-                manufacturerName
-            )
+            manufacturerFormatted =
+                context.getString(
+                    R.string.format_manufacturer_with_arrow,
+                    manufacturerName,
+                ),
         )
     }
-    
+
     /**
      * Форматирует информацию о рейтинге продукта
      *
@@ -38,20 +39,21 @@ class ProductInfoPresenter(private val context: Context) {
      */
     fun formatRating(product: ProductDetail): ProductRatingInfo {
         val ratingScore = product.rating.score
-        val formattedRating = ratingScore.takeIf { it > 0 }?.let { 
-            String.format("%.1f", it) 
-        } ?: context.getString(R.string.default_rating)
-        
+        val formattedRating =
+            ratingScore.takeIf { it > 0 }?.let {
+                String.format("%.1f", it)
+            } ?: context.getString(R.string.default_rating)
+
         // Всегда используем фактическое количество отзывов, даже если оно 0
         val reviewsCount = product.rating.reviewsCount
         val formattedReviews = context.getString(R.string.format_reviews_count, reviewsCount)
-        
+
         return ProductRatingInfo(
             formattedRating = formattedRating,
-            formattedReviewsCount = formattedReviews
+            formattedReviewsCount = formattedReviews,
         )
     }
-    
+
     /**
      * Форматирует информацию о продавце
      *
@@ -59,28 +61,30 @@ class ProductInfoPresenter(private val context: Context) {
      * @return Отформатированная информация о продавце
      */
     fun formatSellerInfo(product: ProductDetail): SellerInfo {
-        val sellerName = product.seller.takeIf { it.isNotEmpty() } 
-            ?: context.getString(R.string.default_seller_name)
-            
+        val sellerName =
+            product.seller.takeIf { it.isNotEmpty() }
+                ?: context.getString(R.string.default_seller_name)
+
         val sellerRating = product.sellerRating
         val sellerReviews = product.sellerReviewsCount
-        
-        val formattedRating = if (sellerRating > 0 && sellerReviews.isNotEmpty()) {
-            context.getString(
-                R.string.format_seller_rating,
-                sellerRating.toString(),
-                sellerReviews
-            )
-        } else {
-            context.getString(R.string.default_seller_rating)
-        }
-        
+
+        val formattedRating =
+            if (sellerRating > 0 && sellerReviews.isNotEmpty()) {
+                context.getString(
+                    R.string.format_seller_rating,
+                    sellerRating.toString(),
+                    sellerReviews,
+                )
+            } else {
+                context.getString(R.string.default_seller_rating)
+            }
+
         return SellerInfo(
             name = sellerName,
-            rating = formattedRating
+            rating = formattedRating,
         )
     }
-    
+
     /**
      * Форматирует информацию о промо-коде
      *
@@ -96,34 +100,36 @@ class ProductInfoPresenter(private val context: Context) {
             PromoCodeInfo(
                 discountText = context.getString(R.string.default_promo_discount),
                 codeText = context.getString(R.string.default_promo_code),
-                hasPromoCode = true
+                hasPromoCode = true,
             )
         }
     }
-    
+
     private fun formatPromoCodeData(promo: PromoCode): PromoCodeInfo {
         // Обрабатываем префикс "Промокод" в коде промокода
-        val cleanCode = if (promo.code.startsWith(context.getString(R.string.prefix_promo_code))) {
-            promo.code.substring(context.getString(R.string.prefix_promo_code).length)
-        } else {
-            promo.code
-        }
-        
-        val promoText = if (promo.minOrder != null && promo.expiryDate != null) {
-            context.getString(
-                R.string.format_promo_code,
-                cleanCode,
-                promo.minOrder,
-                promo.expiryDate
-            )
-        } else {
-            context.getString(R.string.format_promo_code_simple, cleanCode)
-        }
-        
+        val cleanCode =
+            if (promo.code.startsWith(context.getString(R.string.prefix_promo_code))) {
+                promo.code.substring(context.getString(R.string.prefix_promo_code).length)
+            } else {
+                promo.code
+            }
+
+        val promoText =
+            if (promo.minOrder != null && promo.expiryDate != null) {
+                context.getString(
+                    R.string.format_promo_code,
+                    cleanCode,
+                    promo.minOrder,
+                    promo.expiryDate,
+                )
+            } else {
+                context.getString(R.string.format_promo_code_simple, cleanCode)
+            }
+
         return PromoCodeInfo(
             discountText = promo.discount,
             codeText = promoText,
-            hasPromoCode = true
+            hasPromoCode = true,
         )
     }
 }
@@ -133,7 +139,7 @@ class ProductInfoPresenter(private val context: Context) {
  */
 data class BasicProductInfo(
     val title: String,
-    val manufacturerFormatted: String
+    val manufacturerFormatted: String,
 )
 
 /**
@@ -141,7 +147,7 @@ data class BasicProductInfo(
  */
 data class ProductRatingInfo(
     val formattedRating: String,
-    val formattedReviewsCount: String
+    val formattedReviewsCount: String,
 )
 
 /**
@@ -149,7 +155,7 @@ data class ProductRatingInfo(
  */
 data class SellerInfo(
     val name: String,
-    val rating: String
+    val rating: String,
 )
 
 /**
@@ -158,5 +164,5 @@ data class SellerInfo(
 data class PromoCodeInfo(
     val discountText: String,
     val codeText: String,
-    val hasPromoCode: Boolean
+    val hasPromoCode: Boolean,
 )

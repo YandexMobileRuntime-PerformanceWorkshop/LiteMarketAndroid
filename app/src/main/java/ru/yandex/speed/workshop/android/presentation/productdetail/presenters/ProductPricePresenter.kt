@@ -6,7 +6,6 @@ import ru.yandex.speed.workshop.android.domain.models.ProductDetail
  * Презентер для работы с ценами и скидками продукта
  */
 class ProductPricePresenter {
-
     /**
      * Форматирует ценовую информацию о продукте
      *
@@ -15,19 +14,19 @@ class ProductPricePresenter {
      */
     fun formatPrice(product: ProductDetail): FormattedPrice {
         val hasOldPrice = !product.oldPrice.isNullOrEmpty() && product.oldPrice.isNotBlank()
-        
+
         val discountText = formatDiscount(product)
         val showDiscount = discountText.isNotEmpty()
-        
+
         return FormattedPrice(
             currentPrice = product.currentPrice,
             oldPrice = product.oldPrice,
             discountText = discountText,
             showOldPrice = hasOldPrice,
-            showDiscount = showDiscount
+            showDiscount = showDiscount,
         )
     }
-    
+
     /**
      * Форматирует текст скидки
      */
@@ -55,5 +54,5 @@ data class FormattedPrice(
     val oldPrice: String?,
     val discountText: String,
     val showOldPrice: Boolean,
-    val showDiscount: Boolean
+    val showDiscount: Boolean,
 )

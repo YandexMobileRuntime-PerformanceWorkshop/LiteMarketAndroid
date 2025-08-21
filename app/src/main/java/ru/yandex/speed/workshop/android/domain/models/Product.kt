@@ -28,7 +28,7 @@ data class Product(
      */
     val discountPercentage: String?
         get() = discountPercent?.toString()
-        
+
     /**
      * Есть ли скидка на товар
      */

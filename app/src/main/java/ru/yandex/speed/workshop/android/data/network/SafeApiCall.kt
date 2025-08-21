@@ -7,7 +7,7 @@ import timber.log.Timber
 
 /**
  * Функция для безопасного выполнения API-запросов с унифицированной обработкой ошибок
- * 
+ *
  * @param call Функция, выполняющая API-запрос и возвращающая Response<T>
  * @return Result<T> с данными или ошибкой
  */
@@ -35,7 +35,7 @@ suspend fun <T> safeApiCall(call: () -> Response<T>): Result<T> {
 
 /**
  * Функция-расширение для безопасного выполнения блокирующих API-запросов с унифицированной обработкой ошибок
- * 
+ *
  * @return Result<T> с данными или ошибкой
  */
 suspend fun <T> Call<T>.safeExecute(): Result<T> {

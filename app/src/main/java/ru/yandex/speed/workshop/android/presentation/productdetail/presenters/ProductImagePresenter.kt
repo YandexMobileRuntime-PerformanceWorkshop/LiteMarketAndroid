@@ -7,7 +7,6 @@ import timber.log.Timber
  * Презентер для работы с изображениями продукта
  */
 class ProductImagePresenter {
-    
     /**
      * Получает список URL изображений для отображения в галерее
      *
@@ -16,13 +15,13 @@ class ProductImagePresenter {
      */
     fun getGalleryImages(product: ProductDetail): GalleryImages {
         val imageUrls = product.imageUrls
-        
+
         // Логируем информацию об изображениях
         Timber.d("Getting gallery images, count: ${imageUrls.size}")
-        
+
         return GalleryImages(
             imageUrls = imageUrls,
-            isEmpty = imageUrls.isEmpty()
+            isEmpty = imageUrls.isEmpty(),
         )
     }
 }
@@ -32,5 +31,5 @@ class ProductImagePresenter {
  */
 data class GalleryImages(
     val imageUrls: List<String>,
-    val isEmpty: Boolean
+    val isEmpty: Boolean,
 )
