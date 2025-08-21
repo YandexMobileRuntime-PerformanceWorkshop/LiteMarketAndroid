@@ -88,7 +88,18 @@ class ProductPagingAdapter(
 
             updateFavoriteIcon(product.id, favoriteImageView)
 
-            itemView.setOnClickListener { onProductClick(product) }
+            itemView.setOnClickListener {
+                // Аналитика при клике на товар
+                YandexAnalytics.getInstance().trackEvent(
+                    "product_click_from_list",
+                    mapOf(
+                        "product_id" to product.id,
+                        "product_title" to product.title,
+                        "position" to bindingAdapterPosition,
+                    ),
+                )
+                onProductClick(product)
+            }
             favoriteImageView.setOnClickListener {
                 onFavoriteClick(product.id)
                 updateFavoriteIcon(product.id, favoriteImageView)
