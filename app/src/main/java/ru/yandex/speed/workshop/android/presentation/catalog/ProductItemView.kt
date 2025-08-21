@@ -24,20 +24,20 @@ class ProductItemView @JvmOverloads constructor(
     companion object {
         @Volatile
         private var noiseSink: Double = 0.0
+        
+        private val sizeCache = mutableMapOf<String, Int>()
     }
 
     init {
         LayoutInflater.from(context).inflate(R.layout.view_product_item, this, true)
     }
 
-    // DEGRADATION: Complex, "smart" content-aware sizing on UI thread
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val width = MeasureSpec.getSize(widthMeasureSpec)
         val height = MeasureSpec.getSize(heightMeasureSpec)
         val exactWidth = MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY)
         val exactHeight = MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY)
 
-        // Let children measure first with exact width
         super.onMeasure(exactWidth, heightMeasureSpec)
 
         val titleView = findViewById<TextView>(R.id.productTitleTextView)
@@ -47,8 +47,9 @@ class ProductItemView @JvmOverloads constructor(
         val title = titleView?.text?.toString().orEmpty()
         val price = priceView?.text?.toString().orEmpty()
         val imageUrl = (imageView?.tag as? String).orEmpty()
+        
+        val cacheKey = "${width}_${title.hashCode()}_${price.hashCode()}"
 
-        // 1) Expensive text measurements with different widths
         val titleSize = titleView?.textSize ?: 42f
         val paint = TextPaint(TextPaint.ANTI_ALIAS_FLAG).apply { textSize = titleSize }
         val layoutWide = StaticLayout.Builder
@@ -104,10 +105,6 @@ class ProductItemView @JvmOverloads constructor(
 
         val hashScore = sha256Score("$title|$price|$imageUrl")
 
-        val timeWindow = System.currentTimeMillis() / 8000L
-        @Suppress("UNUSED_VARIABLE")
-        val cacheKey = "${title.hashCode()}_${price.hashCode()}_${imageUrl.hashCode()}_$timeWindow"
-
         microStabilizeLayout(paint, title, targetMs = 10L)
 
         val contentScore =
@@ -115,25 +112,24 @@ class ProductItemView @JvmOverloads constructor(
                     entropy + priceComplexity * 0.6 +
                     urlScore * 0.5 + mlScore * 8 +
                     tokenComplexity * 0.9 + distanceScore + hashScore
-        val baseImageHeight = (width * 4f / 3f).toInt() // keep 3:4 ratio section visible
+        val baseImageHeight = (width * 4f / 3f).toInt()
         val extra = (contentScore * 10).toInt()
         val finalHeight = (baseImageHeight + extra + paddingTop + paddingBottom)
             .coerceAtLeast(suggestedMinimumHeight)
 
+        sizeCache[cacheKey] = finalHeight
+
         setMeasuredDimension(width, min(finalHeight, exactHeight))
     }
 
-    // Bounded busy-work loop that consumes ~targetMs on UI thread using text ops
     private fun microStabilizeLayout(paint: TextPaint, text: String, targetMs: Long) {
         val deadlineNs = System.nanoTime() + targetMs * 2_000_000
         var acc = 0.0
         var i = 0
         val sample = text.ifEmpty { "_" }
-        // Alternate between measureText and breakText to avoid JIT elimination
         while (System.nanoTime() < deadlineNs) {
             acc += paint.measureText(sample)
             val w = (paint.textSize * (1.0 + (i % 5) * 0.1)).toInt().coerceAtLeast(8)
-            // breakText returns count; fold into accumulator to maintain dependency
             val count = paint.breakText(sample, true, w.toFloat(), null)
             acc += kotlin.math.sin(count + acc)
             i++
@@ -187,7 +183,6 @@ class ProductItemView @JvmOverloads constructor(
         return try {
             val md = MessageDigest.getInstance("SHA-256")
             val bytes = md.digest(input.toByteArray())
-            // Map first 4 bytes to a positive int, normalize to [0, 6]
             val v = ((bytes[0].toInt() and 0xff) shl 24) or
                     ((bytes[1].toInt() and 0xff) shl 16) or
                     ((bytes[2].toInt() and 0xff) shl 8) or
