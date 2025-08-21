@@ -9,6 +9,7 @@ import androidx.core.content.ContextCompat
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
+import com.yandex.analytics.api.YandexAnalytics
 import ru.yandex.speed.workshop.android.R
 import ru.yandex.speed.workshop.android.domain.models.Product
 import ru.yandex.speed.workshop.android.utils.ImageLoader
@@ -57,6 +58,17 @@ class ProductPagingAdapter(
         private val productPriceTextView: TextView get() = itemView.findViewById(R.id.productPriceTextView)
 
         fun bind(product: Product) {
+            YandexAnalytics.getInstance().trackEvent(
+                "product_impression",
+                mapOf(
+                    "product_id" to product.id,
+                    "product_title" to product.title,
+                    "product_price" to product.currentPrice,
+                    "position" to bindingAdapterPosition,
+                    "has_discount" to product.hasDiscount,
+                ),
+            )
+
             val spacing = itemView.resources.getDimensionPixelSize(R.dimen.catalog_grid_spacing)
             val targetWidth = itemView.resources.displayMetrics.widthPixels / 2 - spacing
             val targetHeight = (targetWidth * 4f / 3f).toInt()

@@ -1,6 +1,7 @@
 package ru.yandex.speed.workshop.android
 
 import android.app.Application
+import com.yandex.analytics.api.YandexAnalytics
 import dagger.hilt.android.HiltAndroidApp
 import ru.yandex.speed.workshop.android.data.network.NetworkPrewarmer
 import ru.yandex.speed.workshop.android.utils.ApplicationStartupTracker
@@ -28,6 +29,8 @@ class SpeedWorkshopApplication : Application() {
 
         // Инициализация Timber для логирования
         Timber.plant(Timber.DebugTree())
+
+        YandexAnalytics.getInstance().initialize(this, "demo-api-key-12345")
 
         // Инициализация трекера запуска приложения
         startupTracker.initialize(this)

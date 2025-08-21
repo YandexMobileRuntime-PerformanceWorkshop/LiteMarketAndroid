@@ -104,6 +104,9 @@ dependencies {
     // Logging
     implementation(libs.timber)
 
+    // Analytics
+    implementation(files("libs/yandex-analytics-1.0.0.aar"))
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
