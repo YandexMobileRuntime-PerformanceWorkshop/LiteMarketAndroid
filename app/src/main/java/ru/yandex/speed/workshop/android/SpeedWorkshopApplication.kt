@@ -1,0 +1,43 @@
+package ru.yandex.speed.workshop.android
+
+import android.app.Application
+import com.yandex.analytics.api.YandexAnalytics
+import dagger.hilt.android.HiltAndroidApp
+import ru.yandex.speed.workshop.android.data.network.NetworkPrewarmer
+import ru.yandex.speed.workshop.android.utils.ApplicationStartupTracker
+import ru.yandex.speed.workshop.android.utils.PerformanceTimestamp
+import timber.log.Timber
+import javax.inject.Inject
+
+/**
+ * Класс приложения для инициализации глобальных компонентов
+ */
+@HiltAndroidApp
+class SpeedWorkshopApplication : Application() {
+    @Inject
+    lateinit var startupTracker: ApplicationStartupTracker
+
+    override fun onCreate() {
+        // Инициализация метки времени старта приложения
+        // Важно вызвать ДО super.onCreate()
+        PerformanceTimestamp.initializeAppStart()
+
+        // Запуск prewarming сетевых соединений как можно раньше
+        NetworkPrewarmer().startPrewarming()
+
+        super.onCreate()
+
+        // Инициализация Timber для логирования
+        Timber.plant(Timber.DebugTree())
+
+        YandexAnalytics.getInstance().initialize(this, "demo-api-key-12345")
+
+        // Инициализация трекера запуска приложения
+        startupTracker.initialize(this)
+        startupTracker.onApplicationCreated()
+
+        // ImageLoader инициализируется автоматически через Hilt
+
+        Timber.i("Application initialized at ${System.currentTimeMillis()}")
+    }
+}

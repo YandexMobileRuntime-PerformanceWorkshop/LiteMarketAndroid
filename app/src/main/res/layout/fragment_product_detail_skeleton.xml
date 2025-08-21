@@ -1,0 +1,379 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/white">
+
+    <FrameLayout
+        android:id="@+id/skeletonContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <androidx.core.widget.NestedScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginBottom="80dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Header Skeleton -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="56dp"
+                    android:orientation="horizontal"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:gravity="center_vertical"
+                    android:background="@color/white">
+
+                    <View
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:background="@drawable/skeleton_bg_round" />
+
+                    <View
+                        android:layout_width="0dp"
+                        android:layout_height="1dp"
+                        android:layout_weight="1" />
+
+                    <View
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_marginEnd="16dp"
+                        android:background="@drawable/skeleton_bg_round" />
+
+                    <View
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:background="@drawable/skeleton_bg_round" />
+
+                </LinearLayout>
+
+                <!-- Gallery Skeleton -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="300dp"
+                    android:background="@drawable/skeleton_bg" />
+
+                <!-- Page Indicator Skeleton -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="16dp"
+                    android:orientation="horizontal">
+
+                    <View
+                        android:layout_width="8dp"
+                        android:layout_height="8dp"
+                        android:layout_marginEnd="4dp"
+                        android:background="@drawable/skeleton_bg_round" />
+
+                    <View
+                        android:layout_width="8dp"
+                        android:layout_height="8dp"
+                        android:layout_marginEnd="4dp"
+                        android:background="@drawable/skeleton_bg_round" />
+
+                    <View
+                        android:layout_width="8dp"
+                        android:layout_height="8dp"
+                        android:background="@drawable/skeleton_bg_round" />
+
+                </LinearLayout>
+
+                <!-- Product Info Skeleton -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp">
+
+                    <!-- Badge Skeleton -->
+                    <View
+                        android:layout_width="80dp"
+                        android:layout_height="20dp"
+                        android:layout_marginBottom="8dp"
+                        android:background="@drawable/skeleton_bg" />
+
+                    <!-- Manufacturer Skeleton -->
+                    <View
+                        android:layout_width="100dp"
+                        android:layout_height="16dp"
+                        android:layout_marginBottom="8dp"
+                        android:background="@drawable/skeleton_bg" />
+
+                    <!-- Product Title Skeleton -->
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="20dp"
+                        android:layout_marginBottom="4dp"
+                        android:background="@drawable/skeleton_bg" />
+
+                    <View
+                        android:layout_width="280dp"
+                        android:layout_height="20dp"
+                        android:layout_marginBottom="12dp"
+                        android:background="@drawable/skeleton_bg" />
+
+                    <!-- Rating Skeleton -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        android:orientation="horizontal">
+
+                        <View
+                            android:layout_width="100dp"
+                            android:layout_height="16dp"
+                            android:background="@drawable/skeleton_bg" />
+
+                        <View
+                            android:layout_width="60dp"
+                            android:layout_height="16dp"
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/skeleton_bg" />
+
+                    </LinearLayout>
+
+                    <!-- Price Card Skeleton -->
+                    <androidx.cardview.widget.CardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        app:cardCornerRadius="8dp"
+                        app:cardElevation="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="16dp">
+
+                            <!-- Price Line Skeleton -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <View
+                                    android:layout_width="100dp"
+                                    android:layout_height="24dp"
+                                    android:background="#FFEEEEEE" />
+
+                                <View
+                                    android:layout_width="24dp"
+                                    android:layout_height="16dp"
+                                    android:layout_marginStart="8dp"
+                                    android:background="#FFEEEEEE" />
+
+                                <View
+                                    android:layout_width="0dp"
+                                    android:layout_height="1dp"
+                                    android:layout_weight="1" />
+
+                                <View
+                                    android:layout_width="60dp"
+                                    android:layout_height="16dp"
+                                    android:background="#FFEEEEEE" />
+
+                            </LinearLayout>
+
+                            <!-- Promo Code Skeleton -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="12dp"
+                                android:orientation="horizontal">
+
+                                <View
+                                    android:layout_width="60dp"
+                                    android:layout_height="18dp"
+                                    android:background="#FFEEEEEE" />
+
+                                <View
+                                    android:layout_width="120dp"
+                                    android:layout_height="14dp"
+                                    android:layout_marginStart="8dp"
+                                    android:background="#FFEEEEEE" />
+
+                            </LinearLayout>
+
+                        </LinearLayout>
+
+                    </androidx.cardview.widget.CardView>
+
+                    <!-- Seller Card Skeleton -->
+                    <androidx.cardview.widget.CardView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="16dp"
+                        app:cardCornerRadius="8dp"
+                        app:cardElevation="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:padding="16dp"
+                            android:gravity="center_vertical">
+
+                            <View
+                                android:layout_width="40dp"
+                                android:layout_height="40dp"
+                                android:background="#FFEEEEEE" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginStart="12dp"
+                                android:orientation="vertical">
+
+                                <View
+                                    android:layout_width="120dp"
+                                    android:layout_height="16dp"
+                                    android:layout_marginBottom="4dp"
+                                    android:background="#FFEEEEEE" />
+
+                                <View
+                                    android:layout_width="100dp"
+                                    android:layout_height="12dp"
+                                    android:background="#FFEEEEEE" />
+
+                            </LinearLayout>
+
+                            <View
+                                android:layout_width="24dp"
+                                android:layout_height="24dp"
+                                android:layout_marginStart="8dp"
+                                android:background="#FFEEEEEE" />
+
+                        </LinearLayout>
+
+                    </androidx.cardview.widget.CardView>
+
+                    <!-- Delivery Section Skeleton -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="20dp"
+                        android:orientation="vertical">
+
+                        <!-- Delivery Title -->
+                        <View
+                            android:layout_width="150dp"
+                            android:layout_height="18dp"
+                            android:layout_marginBottom="12dp"
+                            android:background="#FFEEEEEE" />
+
+                        <!-- Delivery Option 1 -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginBottom="12dp"
+                            android:orientation="horizontal">
+
+                            <View
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:background="#FFEEEEEE" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginStart="12dp"
+                                android:orientation="vertical">
+
+                                <View
+                                    android:layout_width="60dp"
+                                    android:layout_height="16dp"
+                                    android:layout_marginBottom="4dp"
+                                    android:background="#FFEEEEEE" />
+
+                                <View
+                                    android:layout_width="200dp"
+                                    android:layout_height="12dp"
+                                    android:background="#FFEEEEEE" />
+
+                            </LinearLayout>
+
+                        </LinearLayout>
+
+                        <!-- Delivery Option 2 -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+
+                            <View
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:background="#FFEEEEEE" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginStart="12dp"
+                                android:orientation="vertical">
+
+                                <View
+                                    android:layout_width="60dp"
+                                    android:layout_height="16dp"
+                                    android:layout_marginBottom="4dp"
+                                    android:background="#FFEEEEEE" />
+
+                                <View
+                                    android:layout_width="150dp"
+                                    android:layout_height="12dp"
+                                    android:background="#FFEEEEEE" />
+
+                            </LinearLayout>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </androidx.core.widget.NestedScrollView>
+
+    </FrameLayout>
+
+    <!-- Bottom Buttons Skeleton -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:background="@color/white">
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:background="#FFEEEEEE" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:background="#FFEEEEEE" />
+
+    </LinearLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout> 
