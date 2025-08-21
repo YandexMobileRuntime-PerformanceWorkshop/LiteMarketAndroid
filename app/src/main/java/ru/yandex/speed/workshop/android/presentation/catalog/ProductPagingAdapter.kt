@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
@@ -26,21 +27,19 @@ class ProductPagingAdapter(
         override fun areItemsTheSame(
             oldItem: Product,
             newItem: Product,
-        ): Boolean = oldItem.id == newItem.id
+        ): Boolean = oldItem == newItem
 
         override fun areContentsTheSame(
             oldItem: Product,
             newItem: Product,
-        ): Boolean = oldItem == newItem
+        ): Boolean = false
     }
 
     override fun onCreateViewHolder(
         parent: ViewGroup,
         viewType: Int,
     ): ProductViewHolder {
-        val view =
-            LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_product, parent, false)
+        val view = ProductItemView(parent.context)
         return ProductViewHolder(view)
     }
 
@@ -52,10 +51,10 @@ class ProductPagingAdapter(
     }
 
     inner class ProductViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val productImageView: ImageView = itemView.findViewById(R.id.productImageView)
-        private val favoriteImageView: ImageView = itemView.findViewById(R.id.favoriteImageView)
-        private val productTitleTextView: TextView = itemView.findViewById(R.id.productTitleTextView)
-        private val productPriceTextView: TextView = itemView.findViewById(R.id.productPriceTextView)
+        private val productImageView: ImageView get() = itemView.findViewById(R.id.productImageView)
+        private val favoriteImageView: ImageView get() = itemView.findViewById(R.id.favoriteImageView)
+        private val productTitleTextView: TextView get() = itemView.findViewById(R.id.productTitleTextView)
+        private val productPriceTextView: TextView get() = itemView.findViewById(R.id.productPriceTextView)
 
         fun bind(product: Product) {
             val spacing = itemView.resources.getDimensionPixelSize(R.dimen.catalog_grid_spacing)
@@ -90,12 +89,13 @@ class ProductPagingAdapter(
         ) {
             val isFav = isFavorite(productId)
             val favoriteIcon = if (isFav) R.drawable.ic_heart_filled else R.drawable.ic_heart
-            favoriteImageView.setImageResource(favoriteIcon)
+            favoriteImageView.setImageDrawable(ContextCompat.getDrawable(itemView.context, favoriteIcon))
             val favoriteColor = if (isFav) android.R.color.holo_red_dark else android.R.color.darker_gray
             favoriteImageView.imageTintList =
                 android.content.res.ColorStateList.valueOf(
                     itemView.context.getColor(favoriteColor),
                 )
         }
+
     }
 }
