@@ -192,7 +192,6 @@ class CatalogFragment : Fragment() {
             addItemDecoration(GridSpacingItemDecoration(2, spacing, true))
             adapter = productAdapter.withLoadStateFooter(loadStateAdapter)
 
-            // Добавляем слушатель скролла для измерения производительности
             addOnScrollListener(
                 object : RecyclerView.OnScrollListener() {
                     override fun onScrollStateChanged(

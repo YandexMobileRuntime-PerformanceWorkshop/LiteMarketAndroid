@@ -2,6 +2,7 @@ package ru.yandex.speed.workshop.android
 
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp
+import ru.yandex.speed.workshop.android.data.network.NetworkPrewarmer
 import ru.yandex.speed.workshop.android.utils.ApplicationStartupTracker
 import ru.yandex.speed.workshop.android.utils.PerformanceTimestamp
 import timber.log.Timber
@@ -19,6 +20,9 @@ class SpeedWorkshopApplication : Application() {
         // Инициализация метки времени старта приложения
         // Важно вызвать ДО super.onCreate()
         PerformanceTimestamp.initializeAppStart()
+
+        // Запуск prewarming сетевых соединений как можно раньше
+        NetworkPrewarmer().startPrewarming()
 
         super.onCreate()
 

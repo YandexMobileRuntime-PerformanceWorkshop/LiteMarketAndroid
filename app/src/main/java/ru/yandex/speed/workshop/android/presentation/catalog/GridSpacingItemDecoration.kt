@@ -24,7 +24,6 @@ class GridSpacingItemDecoration(
         val column = position % spanCount
 
         if (includeEdge) {
-            // Внешние отступы
             outRect.left = spacing - column * spacing / spanCount
             outRect.right = (column + 1) * spacing / spanCount
 
@@ -33,7 +32,6 @@ class GridSpacingItemDecoration(
             }
             outRect.bottom = spacing
         } else {
-            // Внутренние отступы
             outRect.left = column * spacing / spanCount
             outRect.right = spacing - (column + 1) * spacing / spanCount
 

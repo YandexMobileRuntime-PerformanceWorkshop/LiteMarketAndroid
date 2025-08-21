@@ -43,39 +43,36 @@ class HttpClient private constructor(private val appContext: Context) {
             }
     }
 
-    private val okHttpClient: OkHttpClient
-
-    init {
-        val cacheDir = File(appContext.cacheDir, "http_cache")
-        val cache = Cache(cacheDir, 20L * 1024 * 1024) // 20MB
-
-        okHttpClient =
-            OkHttpClient.Builder()
-                .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(30, TimeUnit.SECONDS)
-                .writeTimeout(30, TimeUnit.SECONDS)
-                .cache(cache)
-                .addNetworkInterceptor { chain ->
-                    val request = chain.request()
-                    val response = chain.proceed(request)
-                    if (request.method.equals("GET", ignoreCase = true)) {
-                        val cacheControl = response.header("Cache-Control")
-                        if (cacheControl.isNullOrBlank() ||
-                            cacheControl.contains("no-store", true) ||
-                            cacheControl.contains("no-cache", true) ||
-                            cacheControl.contains("must-revalidate", true)
-                        ) {
-                            response.newBuilder()
-                                .header("Cache-Control", "public, max-age=60")
-                                .build()
-                        } else {
-                            response
-                        }
+    private val cacheDir = File(appContext.cacheDir, "http_cache")
+    private val cache = Cache(cacheDir, 20L * 1024 * 1024)
+    
+    private val mainHttpClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .cache(cache)
+            .addNetworkInterceptor { chain ->
+                val request = chain.request()
+                val response = chain.proceed(request)
+                if (request.method.equals("GET", ignoreCase = true)) {
+                    val cacheControl = response.header("Cache-Control")
+                    if (cacheControl.isNullOrBlank() ||
+                        cacheControl.contains("no-store", true) ||
+                        cacheControl.contains("no-cache", true) ||
+                        cacheControl.contains("must-revalidate", true)
+                    ) {
+                        response.newBuilder()
+                            .header("Cache-Control", "public, max-age=60")
+                            .build()
                     } else {
                         response
                     }
+                } else {
+                    response
                 }
-                .build()
+            }
+            .build()
     }
 
     private val baseURL = "https://bbapkfh3cnqi1rvo0gla.containers.yandexcloud.net" // Yandex Cloud API
@@ -197,7 +194,7 @@ class HttpClient private constructor(private val appContext: Context) {
     private fun executeRequest(request: Request): String {
         try {
             Timber.d("Executing request: ${request.method} ${request.url}")
-            val response = okHttpClient.newCall(request).execute()
+            val response = mainHttpClient.newCall(request).execute()
 
             Timber.d("Response code: ${response.code}")
 
@@ -229,7 +226,7 @@ class HttpClient private constructor(private val appContext: Context) {
         Retrofit.Builder()
             .baseUrl(baseURL)
             .addConverterFactory(jsonConverter)
-            .client(okHttpClient)
+            .client(mainHttpClient)
             .build()
     }
 
