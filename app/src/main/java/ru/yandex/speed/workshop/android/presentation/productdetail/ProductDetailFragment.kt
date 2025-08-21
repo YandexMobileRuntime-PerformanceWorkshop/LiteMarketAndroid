@@ -24,6 +24,9 @@ import ru.yandex.speed.workshop.android.presentation.productdetail.presenters.Pr
 import ru.yandex.speed.workshop.android.presentation.productdetail.presenters.ProductPricePresenter
 import ru.yandex.speed.workshop.android.presentation.ui.UiState
 import ru.yandex.speed.workshop.android.utils.ImageLoader
+import ru.yandex.speed.workshop.android.utils.LCPTrackingTime
+import ru.yandex.speed.workshop.android.utils.MVIScreenAnalytics
+import ru.yandex.speed.workshop.android.utils.PerformanceTimestamp
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -33,9 +36,15 @@ class ProductDetailFragment : Fragment() {
 
     @Inject
     lateinit var imageLoader: ImageLoader
+    
+    @Inject
+    lateinit var mviScreenAnalytics: MVIScreenAnalytics
 
     private var _binding: FragmentProductDetailBinding? = null
     private val binding get() = _binding!!
+    
+    // Флаг первой загрузки контента (для отслеживания LCP)
+    private var isFirstContentLoad = true
 
     // Презентеры для логики отображения
     private lateinit var pricePresenter: ProductPricePresenter
@@ -73,6 +82,9 @@ class ProductDetailFragment : Fragment() {
         // Инициализация контейнеров
         contentContainer = binding.contentContainer
         skeletonContainer = binding.skeletonContainer
+        
+        // Инициализация MVIScreenAnalytics для трекинга LCP
+        initializeLCPTracking()
 
         setupButtons()
         setupDeliveryTabs()
@@ -86,6 +98,31 @@ class ProductDetailFragment : Fragment() {
             SnackbarUtils.showError(requireView(), getString(R.string.error_no_product_id))
             findNavController().navigateUp()
         }
+    }
+    
+    /**
+     * Инициализация трекинга LCP на основе переданных аргументов
+     */
+    private fun initializeLCPTracking() {
+        // Получаем timestamp создания экрана из аргументов, если есть
+        val screenCreationTimestamp = arguments?.getLong("screen_creation_timestamp", 0L)
+        
+        if (screenCreationTimestamp != null && screenCreationTimestamp > 0L) {
+            // Создаем timestamp из сохраненного времени (в миллисекундах)
+            val timestamp = PerformanceTimestamp.fromMilliseconds(screenCreationTimestamp)
+            Timber.d("Initializing LCP tracking from screen creation: $screenCreationTimestamp ms")
+            mviScreenAnalytics.initialize(
+                trackingTimeType = LCPTrackingTime.FROM_SCREEN_CREATION,
+                creationTimestamp = timestamp
+            )
+        } else {
+            // Инициализируем трекинг от старта приложения
+            Timber.d("Initializing LCP tracking from app start")
+            mviScreenAnalytics.initialize(trackingTimeType = LCPTrackingTime.FROM_APP_START)
+        }
+        
+        // Сбрасываем флаг первой загрузки
+        isFirstContentLoad = true
     }
 
     override fun onDestroyView() {
@@ -280,6 +317,13 @@ class ProductDetailFragment : Fragment() {
         if (currentProductDetail == null) {
             updateAllProductDetails(productDetail)
             currentProductDetail = productDetail
+            
+            // Если это первая загрузка контента, логируем LCP
+            if (isFirstContentLoad) {
+                isFirstContentLoad = false
+                Timber.d("Logging LCP for first content load")
+                mviScreenAnalytics.logLCP("ProductDetail")
+            }
             return
         }
 

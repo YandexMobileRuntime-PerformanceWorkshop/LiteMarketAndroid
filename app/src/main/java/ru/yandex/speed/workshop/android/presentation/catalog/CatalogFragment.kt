@@ -22,6 +22,9 @@ import kotlinx.coroutines.launch
 import ru.yandex.speed.workshop.android.R
 import ru.yandex.speed.workshop.android.databinding.FragmentCatalogBinding
 import ru.yandex.speed.workshop.android.domain.models.Product
+import ru.yandex.speed.workshop.android.utils.LCPTrackingTime
+import ru.yandex.speed.workshop.android.utils.MVIScreenAnalytics
+import ru.yandex.speed.workshop.android.utils.PerformanceTimestamp
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -32,8 +35,14 @@ class CatalogFragment : Fragment() {
 
     @Inject
     lateinit var skeletonHelper: SkeletonHelper
+    
+    @Inject
+    lateinit var mviScreenAnalytics: MVIScreenAnalytics
 
     private lateinit var skeletonAdapter: SkeletonHelper.SkeletonAdapter
+    
+    // Флаг для отслеживания первой успешной загрузки данных (для LCP)
+    private var isFirstSuccessfulLoad = true
 
     private val viewModel: CatalogViewModel by viewModels()
 
@@ -64,6 +73,9 @@ class CatalogFragment : Fragment() {
     ) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Инициализируем LCP трекинг для экрана каталога
+        initLCPTracking()
+        
         setupTabs()
         setupRecyclerView()
         setupSearch()
@@ -72,7 +84,10 @@ class CatalogFragment : Fragment() {
         setupSkeletonView()
 
         // Показываем скелетоны при первой загрузке
-            showSkeletons()
+        showSkeletons()
+        
+        // Сбрасываем флаг первой загрузки для правильного измерения LCP
+        isFirstSuccessfulLoad = true
 
         // Подписываемся на изменения в данных
         viewLifecycleOwner.lifecycleScope.launch {
@@ -192,6 +207,16 @@ class CatalogFragment : Fragment() {
             productAdapter.retry()
         }
     }
+    
+    /**
+     * Инициализация трекинга LCP для экрана каталога
+     */
+    private fun initLCPTracking() {
+        // Для каталога используем точку отсчета от запуска приложения,
+        // так как это обычно первый экран, который видит пользователь
+        mviScreenAnalytics.initialize(trackingTimeType = LCPTrackingTime.FROM_APP_START)
+        Timber.d("Initialized LCP tracking for catalog screen from app start")
+    }
 
     private fun setupSkeletonView() {
         skeletonAdapter =
@@ -247,6 +272,25 @@ class CatalogFragment : Fragment() {
                 binding.swipeRefreshLayout.isRefreshing = false
                 binding.errorTextView.isVisible = false
                 binding.productsRecyclerView.isVisible = true
+                
+                // Если это первая успешная загрузка данных и у нас есть элементы для отображения
+                if (isFirstSuccessfulLoad && productAdapter.itemCount > 0) {
+                    isFirstSuccessfulLoad = false
+                    // Логируем LCP, так как первая загрузка каталога завершена
+                    Timber.d("Logging LCP for catalog screen with ${productAdapter.itemCount} items loaded")
+                    mviScreenAnalytics.logLCP("Catalog")
+                    
+                    // Дополнительное логирование для удобства тестирования
+                    val productIds = mutableListOf<String>()
+                    for (i in 0 until minOf(3, productAdapter.itemCount)) {
+                        try {
+                            productAdapter.getItemId(i)?.let { productIds.add(it.toString()) }
+                        } catch (e: Exception) {
+                            // Игнорируем ошибки при получении ID
+                        }
+                    }
+                    Timber.d("First visible products: ${productIds.joinToString(", ")}")
+                }
             }
         }
     }
@@ -257,6 +301,10 @@ class CatalogFragment : Fragment() {
             val action = navController.currentDestination?.getAction(R.id.action_catalog_to_product_detail)
 
             if (action != null) {
+                // Создаем временную метку для измерения LCP
+                val timestamp = PerformanceTimestamp.now()
+                Timber.d("Creating timestamp for LCP tracking: ${timestamp.toMilliseconds()}")
+                
                 val bundle =
                     Bundle().apply {
                         putString("productId", product.id)
@@ -271,6 +319,9 @@ class CatalogFragment : Fragment() {
                         putString("productShopName", product.seller)
                         putBoolean("isFavorite", viewModel.isProductFavorite(product.id))
                         putStringArray("productImages", product.imageUrls.toTypedArray())
+                        
+                        // Добавляем временную метку для LCP трекинга
+                        putLong("screen_creation_timestamp", timestamp.toMilliseconds())
                         
                         // Добавляем информацию о промокоде, если он есть
                         product.promoCode?.let { promoCode ->
