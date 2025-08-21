@@ -70,8 +70,8 @@ object AppModule {
     @Provides
     @Singleton
     fun provideImageLoader(
-        application: Application, 
-        performanceMetricManager: PerformanceMetricManager
+        application: Application,
+        performanceMetricManager: PerformanceMetricManager,
     ): ImageLoader {
         return ImageLoader(application, performanceMetricManager)
     }

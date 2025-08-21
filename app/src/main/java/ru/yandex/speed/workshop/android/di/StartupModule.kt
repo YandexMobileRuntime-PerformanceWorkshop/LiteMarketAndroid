@@ -14,15 +14,12 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object StartupModule {
-    
     /**
      * Предоставляет трекер запуска приложения
      */
     @Provides
     @Singleton
-    fun provideApplicationStartupTracker(
-        performanceMetricManager: PerformanceMetricManager
-    ): ApplicationStartupTracker {
+    fun provideApplicationStartupTracker(performanceMetricManager: PerformanceMetricManager): ApplicationStartupTracker {
         return ApplicationStartupTracker(performanceMetricManager)
     }
 }

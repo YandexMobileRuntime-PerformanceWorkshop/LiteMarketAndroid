@@ -11,7 +11,8 @@ import javax.inject.Singleton
  */
 data class PerformanceMetric(
     val name: String,
-    val value: Long, // в миллисекундах
+    // Значение в миллисекундах
+    val value: Long,
     val context: Map<String, Any> = emptyMap(),
     val timestamp: Long = System.currentTimeMillis(),
 )
@@ -49,6 +50,7 @@ class PerformanceMetricManager
          */
         fun stop(
             name: String,
+            // Дополнительная информация
             responseInfo: Map<String, String> = emptyMap(),
         ) {
             if (name.isEmpty() || measure == null) {
@@ -109,25 +111,28 @@ class PerformanceMetricManager
         /**
          * Логирует время старта приложения.
          * Измеряет время от инициализации приложения до момента, когда UI становится интерактивным.
-         * 
+         *
          * @param uiReadyTime временная метка, когда UI стал интерактивным
          * @param additionalContext дополнительный контекст для логирования
          */
-        fun logAppStartTime(uiReadyTime: PerformanceTimestamp, additionalContext: Map<String, Any> = emptyMap()) {
+        fun logAppStartTime(
+            uiReadyTime: PerformanceTimestamp,
+            additionalContext: Map<String, Any> = emptyMap(),
+        ) {
             val appStartTime = PerformanceTimestamp.processStartTime()
             val startTimeMs = TimeUnit.NANOSECONDS.toMillis(uiReadyTime.elapsedSince(appStartTime))
-            
+
             val context = HashMap<String, Any>(additionalContext)
             context["ui_ready_time"] = uiReadyTime.toMilliseconds()
             context["app_start_time"] = appStartTime.toMilliseconds()
             context["measured_at"] = System.currentTimeMillis()
-            
+
             recordMetric(
                 name = "AppStartTime",
                 valueMs = startTimeMs,
-                context = context
+                context = context,
             )
-            
+
             Timber.tag("Performance").i("App Start Time: ${startTimeMs}ms")
         }
 

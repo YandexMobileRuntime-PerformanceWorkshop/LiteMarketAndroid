@@ -12,10 +12,9 @@ import javax.inject.Inject
  */
 @HiltAndroidApp
 class SpeedWorkshopApplication : Application() {
-    
     @Inject
     lateinit var startupTracker: ApplicationStartupTracker
-    
+
     override fun onCreate() {
         // Инициализация метки времени старта приложения
         // Важно вызвать ДО super.onCreate()
@@ -29,7 +28,7 @@ class SpeedWorkshopApplication : Application() {
         // Инициализация трекера запуска приложения
         startupTracker.initialize(this)
         startupTracker.onApplicationCreated()
-        
+
         // ImageLoader инициализируется автоматически через Hilt
 
         Timber.i("Application initialized at ${System.currentTimeMillis()}")

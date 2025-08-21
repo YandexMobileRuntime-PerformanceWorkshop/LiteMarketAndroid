@@ -40,7 +40,7 @@ class ProductDetailFragment : Fragment() {
 
     @Inject
     lateinit var mviScreenAnalytics: MVIScreenAnalytics
-    
+
     @Inject
     lateinit var performanceMetricManager: PerformanceMetricManager
 
@@ -131,10 +131,10 @@ class ProductDetailFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        
+
         // Анализ загрузки изображений перед уничтожением представления
         imageLoader.analyzeImageLoadingMetrics()
-        
+
         _binding = null
     }
 

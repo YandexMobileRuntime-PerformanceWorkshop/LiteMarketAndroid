@@ -61,7 +61,7 @@ class ProductPagingAdapter(
             val spacing = itemView.resources.getDimensionPixelSize(R.dimen.catalog_grid_spacing)
             val targetWidth = itemView.resources.displayMetrics.widthPixels / 2 - spacing
             val targetHeight = (targetWidth * 4f / 3f).toInt()
-            
+
             // Загружаем изображение через ImageLoader с трекингом времени загрузки
             val imageUrl = product.imageUrls.firstOrNull() ?: ""
             imageLoader.loadCatalogImage(
@@ -69,7 +69,7 @@ class ProductPagingAdapter(
                 url = imageUrl,
                 width = targetWidth,
                 height = targetHeight,
-                trackingId = "catalog_${product.id}"
+                trackingId = "catalog_${product.id}",
             )
 
             productTitleTextView.text = product.title

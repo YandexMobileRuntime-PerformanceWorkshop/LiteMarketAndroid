@@ -30,7 +30,7 @@ class PerformanceTimestamp constructor(internal val nanoTime: Long) {
 
         // Отслеживание факта инициализации
         private var isAppStartInitialized = false
-        
+
         /**
          * Инициализировать временную метку старта приложения
          * Должен вызываться как можно раньше в Application.onCreate()
@@ -39,7 +39,7 @@ class PerformanceTimestamp constructor(internal val nanoTime: Long) {
             if (!isAppStartInitialized) {
                 // Используем текущее время как базовое
                 appStartTimestamp = now()
-                
+
                 // Учитываем время, прошедшее с момента запуска процесса
                 try {
                     // Пробуем использовать Process.getStartElapsedRealtime() если доступно (API 24+)
@@ -48,7 +48,7 @@ class PerformanceTimestamp constructor(internal val nanoTime: Long) {
                     val startElapsedRealtimeMs = getStartElapsedRealtimeMethod.invoke(null) as Long
                     val currentElapsedRealtimeMs = SystemClock.elapsedRealtime()
                     val processRunningTimeMs = currentElapsedRealtimeMs - startElapsedRealtimeMs
-                    
+
                     // Корректируем время старта на время, которое процесс уже работал
                     val adjustedStartNanos = appStartTimestamp!!.nanoTime - TimeUnit.MILLISECONDS.toNanos(processRunningTimeMs)
                     appStartTimestamp = PerformanceTimestamp(adjustedStartNanos)
@@ -57,9 +57,9 @@ class PerformanceTimestamp constructor(internal val nanoTime: Long) {
                     // Если метод недоступен, используем стандартное время
                     Timber.d("Process.getStartElapsedRealtime() недоступен, используем стандартное время запуска.")
                 }
-                
+
                 Timber.tag("Performance").d("App start timestamp initialized: ${appStartTimestamp?.toMilliseconds()}ms")
-                
+
                 isAppStartInitialized = true
             }
         }
@@ -69,8 +69,8 @@ class PerformanceTimestamp constructor(internal val nanoTime: Long) {
          */
         fun processStartTime(): PerformanceTimestamp {
             // Используем сохраненную метку времени старта или создаем новую, если не инициализирована
-            return appStartTimestamp ?: now().also { 
-                appStartTimestamp = it 
+            return appStartTimestamp ?: now().also {
+                appStartTimestamp = it
                 Timber.tag("Performance").w("Warning: processStartTime() вызван до initializeAppStart()")
             }
         }

@@ -45,10 +45,10 @@ class CatalogFragment : Fragment() {
 
     @Inject
     lateinit var performanceMetricManager: PerformanceMetricManager
-    
+
     @Inject
     lateinit var imageLoader: ImageLoader
-    
+
     @Inject
     lateinit var startupTracker: ApplicationStartupTracker
 
@@ -64,7 +64,7 @@ class CatalogFragment : Fragment() {
             onProductClick = { product -> navigateToProductDetail(product) },
             onFavoriteClick = { productId -> viewModel.onFavoriteClicked(productId) },
             isFavorite = { productId -> viewModel.isProductFavorite(productId) },
-            imageLoader = imageLoader
+            imageLoader = imageLoader,
         )
     }
 
@@ -316,7 +316,7 @@ class CatalogFragment : Fragment() {
                     // Логируем LCP, так как первая загрузка каталога завершена
                     Timber.d("Logging LCP for catalog screen with ${productAdapter.itemCount} items loaded")
                     mviScreenAnalytics.logLCP("Catalog")
-                    
+
                     // Отмечаем завершение загрузки первых данных для метрик старта приложения
                     startupTracker.onFirstDataLoaded()
 
@@ -393,10 +393,10 @@ class CatalogFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         hideSkeletons()
-        
+
         // Анализ загрузки изображений перед уничтожением представления
         imageLoader.analyzeImageLoadingMetrics()
-        
+
         _binding = null
     }
 }
