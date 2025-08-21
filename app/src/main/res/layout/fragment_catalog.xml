@@ -113,12 +113,13 @@
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/categoriesRecyclerView"
         android:layout_width="0dp"
-        android:layout_height="44dp"
-        android:layout_marginTop="8dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="0dp"
         android:clipToPadding="false"
         android:orientation="horizontal"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
+        android:visibility="gone"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -130,11 +131,11 @@
         android:id="@+id/swipeRefreshLayout"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/categoriesRecyclerView">
+        app:layout_constraintTop_toBottomOf="@id/tabLayout">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/productsRecyclerView"
@@ -143,7 +144,7 @@
             android:clipToPadding="false"
             android:paddingStart="8dp"
             android:paddingEnd="8dp"
-            android:paddingTop="8dp"
+            android:paddingTop="4dp"
             android:paddingBottom="56dp"
             app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
             app:spanCount="2"
@@ -156,17 +157,17 @@
         android:id="@+id/skeletonRecyclerView"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="0dp"
         android:visibility="gone"
         android:clipToPadding="false"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
-        android:paddingTop="8dp"
+        android:paddingTop="4dp"
         android:paddingBottom="56dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/categoriesRecyclerView" />
+        app:layout_constraintTop_toBottomOf="@id/tabLayout" />
 
     <!-- Loading Progress -->
     <ProgressBar
