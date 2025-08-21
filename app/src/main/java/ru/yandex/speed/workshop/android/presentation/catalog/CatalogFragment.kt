@@ -23,6 +23,8 @@ import kotlinx.coroutines.launch
 import ru.yandex.speed.workshop.android.R
 import ru.yandex.speed.workshop.android.databinding.FragmentCatalogBinding
 import ru.yandex.speed.workshop.android.domain.models.Product
+import ru.yandex.speed.workshop.android.utils.ApplicationStartupTracker
+import ru.yandex.speed.workshop.android.utils.ImageLoader
 import ru.yandex.speed.workshop.android.utils.LCPTrackingTime
 import ru.yandex.speed.workshop.android.utils.MVIScreenAnalytics
 import ru.yandex.speed.workshop.android.utils.PerformanceMetricManager
@@ -43,6 +45,12 @@ class CatalogFragment : Fragment() {
 
     @Inject
     lateinit var performanceMetricManager: PerformanceMetricManager
+    
+    @Inject
+    lateinit var imageLoader: ImageLoader
+    
+    @Inject
+    lateinit var startupTracker: ApplicationStartupTracker
 
     private lateinit var skeletonAdapter: SkeletonHelper.SkeletonAdapter
 
@@ -56,6 +64,7 @@ class CatalogFragment : Fragment() {
             onProductClick = { product -> navigateToProductDetail(product) },
             onFavoriteClick = { productId -> viewModel.onFavoriteClicked(productId) },
             isFavorite = { productId -> viewModel.isProductFavorite(productId) },
+            imageLoader = imageLoader
         )
     }
 
@@ -307,6 +316,9 @@ class CatalogFragment : Fragment() {
                     // Логируем LCP, так как первая загрузка каталога завершена
                     Timber.d("Logging LCP for catalog screen with ${productAdapter.itemCount} items loaded")
                     mviScreenAnalytics.logLCP("Catalog")
+                    
+                    // Отмечаем завершение загрузки первых данных для метрик старта приложения
+                    startupTracker.onFirstDataLoaded()
 
                     // Дополнительное логирование для удобства тестирования
                     val productIds = mutableListOf<String>()
@@ -381,6 +393,10 @@ class CatalogFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         hideSkeletons()
+        
+        // Анализ загрузки изображений перед уничтожением представления
+        imageLoader.analyzeImageLoadingMetrics()
+        
         _binding = null
     }
 }

@@ -13,6 +13,7 @@ import ru.yandex.speed.workshop.android.data.network.ProductApi
 import ru.yandex.speed.workshop.android.data.repository.ProductRepositoryImpl
 import ru.yandex.speed.workshop.android.domain.repository.ProductRepository
 import ru.yandex.speed.workshop.android.utils.ImageLoader
+import ru.yandex.speed.workshop.android.utils.PerformanceMetricManager
 import javax.inject.Singleton
 
 /**
@@ -68,7 +69,10 @@ object AppModule {
      */
     @Provides
     @Singleton
-    fun provideImageLoader(application: Application): ImageLoader {
-        return ImageLoader(application)
+    fun provideImageLoader(
+        application: Application, 
+        performanceMetricManager: PerformanceMetricManager
+    ): ImageLoader {
+        return ImageLoader(application, performanceMetricManager)
     }
 }

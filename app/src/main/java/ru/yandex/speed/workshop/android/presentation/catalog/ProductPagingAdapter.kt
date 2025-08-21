@@ -8,18 +8,15 @@ import android.widget.TextView
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
-import com.bumptech.glide.MemoryCategory
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.load.resource.bitmap.DownsampleStrategy
-import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import ru.yandex.speed.workshop.android.R
 import ru.yandex.speed.workshop.android.domain.models.Product
+import ru.yandex.speed.workshop.android.utils.ImageLoader
 
 class ProductPagingAdapter(
     private val onProductClick: (Product) -> Unit,
     private val onFavoriteClick: (String) -> Unit,
     private val isFavorite: (String) -> Boolean,
+    private val imageLoader: ImageLoader,
 ) : PagingDataAdapter<Product, ProductPagingAdapter.ProductViewHolder>(Diff) {
     companion object {
         const val VIEW_TYPE_PRODUCT = 0
@@ -64,20 +61,16 @@ class ProductPagingAdapter(
             val spacing = itemView.resources.getDimensionPixelSize(R.dimen.catalog_grid_spacing)
             val targetWidth = itemView.resources.displayMetrics.widthPixels / 2 - spacing
             val targetHeight = (targetWidth * 4f / 3f).toInt()
-
-            Glide.get(itemView.context).setMemoryCategory(MemoryCategory.HIGH)
-
-            Glide.with(itemView.context)
-                .load(product.url)
-                .placeholder(R.drawable.ic_placeholder)
-                .error(R.drawable.ic_placeholder)
-                .centerCrop()
-                .override(targetWidth, targetHeight)
-                .downsample(DownsampleStrategy.AT_MOST)
-                .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
-                .thumbnail(0.25f)
-                .transition(DrawableTransitionOptions.withCrossFade())
-                .into(productImageView)
+            
+            // Загружаем изображение через ImageLoader с трекингом времени загрузки
+            val imageUrl = product.imageUrls.firstOrNull() ?: ""
+            imageLoader.loadCatalogImage(
+                imageView = productImageView,
+                url = imageUrl,
+                width = targetWidth,
+                height = targetHeight,
+                trackingId = "catalog_${product.id}"
+            )
 
             productTitleTextView.text = product.title
             productPriceTextView.text = product.currentPrice

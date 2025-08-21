@@ -36,9 +36,17 @@ class ProductGalleryAdapter(
 
         // Для первого изображения используем специальный метод загрузки без placeholder
         if (position == 0) {
-            imageLoader.loadDetailFirstImage(holder.imageView, imageUrl)
+            imageLoader.loadDetailFirstImage(
+                imageView = holder.imageView, 
+                url = imageUrl, 
+                trackingId = "gallery_first_${position}"
+            )
         } else {
-            imageLoader.loadDetailImage(holder.imageView, imageUrl)
+            imageLoader.loadDetailImage(
+                imageView = holder.imageView, 
+                url = imageUrl, 
+                trackingId = "gallery_other_${position}"
+            )
         }
     }
 

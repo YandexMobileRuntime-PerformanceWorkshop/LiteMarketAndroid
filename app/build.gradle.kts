@@ -67,6 +67,7 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.fragment.ktx)
+    implementation("androidx.lifecycle:lifecycle-process:2.7.0") // Для ProcessLifecycleOwner
 
     // Dagger Hilt
     implementation(libs.dagger.hilt.android)

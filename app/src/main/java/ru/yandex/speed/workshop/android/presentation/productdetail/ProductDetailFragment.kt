@@ -26,6 +26,7 @@ import ru.yandex.speed.workshop.android.presentation.ui.UiState
 import ru.yandex.speed.workshop.android.utils.ImageLoader
 import ru.yandex.speed.workshop.android.utils.LCPTrackingTime
 import ru.yandex.speed.workshop.android.utils.MVIScreenAnalytics
+import ru.yandex.speed.workshop.android.utils.PerformanceMetricManager
 import ru.yandex.speed.workshop.android.utils.PerformanceTimestamp
 import timber.log.Timber
 import javax.inject.Inject
@@ -39,6 +40,9 @@ class ProductDetailFragment : Fragment() {
 
     @Inject
     lateinit var mviScreenAnalytics: MVIScreenAnalytics
+    
+    @Inject
+    lateinit var performanceMetricManager: PerformanceMetricManager
 
     private var _binding: FragmentProductDetailBinding? = null
     private val binding get() = _binding!!
@@ -127,6 +131,10 @@ class ProductDetailFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        
+        // Анализ загрузки изображений перед уничтожением представления
+        imageLoader.analyzeImageLoadingMetrics()
+        
         _binding = null
     }
 

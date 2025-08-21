@@ -2,6 +2,7 @@ package ru.yandex.speed.workshop.android.utils
 
 import timber.log.Timber
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -103,6 +104,31 @@ class PerformanceMetricManager
          */
         fun clearMetrics() {
             metrics.clear()
+        }
+
+        /**
+         * Логирует время старта приложения.
+         * Измеряет время от инициализации приложения до момента, когда UI становится интерактивным.
+         * 
+         * @param uiReadyTime временная метка, когда UI стал интерактивным
+         * @param additionalContext дополнительный контекст для логирования
+         */
+        fun logAppStartTime(uiReadyTime: PerformanceTimestamp, additionalContext: Map<String, Any> = emptyMap()) {
+            val appStartTime = PerformanceTimestamp.processStartTime()
+            val startTimeMs = TimeUnit.NANOSECONDS.toMillis(uiReadyTime.elapsedSince(appStartTime))
+            
+            val context = HashMap<String, Any>(additionalContext)
+            context["ui_ready_time"] = uiReadyTime.toMilliseconds()
+            context["app_start_time"] = appStartTime.toMilliseconds()
+            context["measured_at"] = System.currentTimeMillis()
+            
+            recordMetric(
+                name = "AppStartTime",
+                valueMs = startTimeMs,
+                context = context
+            )
+            
+            Timber.tag("Performance").i("App Start Time: ${startTimeMs}ms")
         }
 
         /**
