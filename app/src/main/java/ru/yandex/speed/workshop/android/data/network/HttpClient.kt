@@ -235,4 +235,26 @@ class HttpClient private constructor(private val appContext: Context) {
     }
 
     fun getApi(): ProductApi = productApiInstance
+
+
+    suspend fun prewarmConnection(): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val url = "$baseURL/ping"
+            val request = Request.Builder()
+                .url(url)
+                .head()
+                .build()
+            
+            Timber.d("Prewarming connection to: $url")
+            
+            val response = mainHttpClient.newCall(request).execute()
+            response.close()
+            
+            Timber.d("Prewarmed connection - DNS resolved, TLS handshake completed. Status: ${response.code}")
+            true
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to prewarm connection")
+            false
+        }
+    }
 }

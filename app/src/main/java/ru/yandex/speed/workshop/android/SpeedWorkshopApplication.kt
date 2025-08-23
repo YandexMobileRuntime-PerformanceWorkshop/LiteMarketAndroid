@@ -21,6 +21,9 @@ class SpeedWorkshopApplication : Application() {
     @Inject
     lateinit var startupTracker: ApplicationStartupTracker
     
+    @Inject
+    lateinit var networkPrewarmer: NetworkPrewarmer
+    
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
@@ -28,10 +31,9 @@ class SpeedWorkshopApplication : Application() {
         // Важно вызвать ДО super.onCreate()
         PerformanceTimestamp.initializeAppStart()
 
-        // Запуск prewarming сетевых соединений как можно раньше
-        NetworkPrewarmer().startPrewarming()
-
         super.onCreate()
+
+        networkPrewarmer.startPrewarming()
 
         // Инициализация Timber для логирования
         Timber.plant(Timber.DebugTree())
