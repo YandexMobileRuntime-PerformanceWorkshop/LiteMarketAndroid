@@ -37,10 +37,10 @@ class CatalogViewModel
         // Конфигурация пагинации
         private val pagingConfig =
             PagingConfig(
-                pageSize = 100,
+                pageSize = 12,
                 enablePlaceholders = false,
-                prefetchDistance = 1,
-                initialLoadSize = 100,
+                prefetchDistance = 4,
+                initialLoadSize = 12,
             )
 
         init {}
