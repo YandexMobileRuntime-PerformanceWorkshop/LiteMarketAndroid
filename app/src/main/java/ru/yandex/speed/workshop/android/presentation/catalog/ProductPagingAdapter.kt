@@ -26,12 +26,19 @@ class ProductPagingAdapter(
         override fun areItemsTheSame(
             oldItem: Product,
             newItem: Product,
-        ): Boolean = oldItem == newItem
+        ): Boolean = oldItem.id == newItem.id
 
         override fun areContentsTheSame(
             oldItem: Product,
             newItem: Product,
-        ): Boolean = false
+        ): Boolean {
+            return oldItem.title == newItem.title &&
+                    oldItem.currentPrice == newItem.currentPrice &&
+                    oldItem.oldPrice == newItem.oldPrice &&
+                    oldItem.discountPercent == newItem.discountPercent &&
+                    oldItem.imageUrls == newItem.imageUrls &&
+                    oldItem.isFavorite == newItem.isFavorite
+        }
     }
 
     override fun onCreateViewHolder(
