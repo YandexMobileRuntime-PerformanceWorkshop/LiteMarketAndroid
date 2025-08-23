@@ -5,6 +5,10 @@ import android.view.View
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.yandex.analytics.api.YandexAnalytics
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import ru.yandex.speed.workshop.android.domain.models.Product
 import ru.yandex.speed.workshop.android.presentation.catalog.ProductPagingAdapter
 import timber.log.Timber
@@ -16,6 +20,9 @@ class VisibilityAnalytics {
     private val currentlyVisibleProducts = mutableSetOf<String>()
     private val analyticsCache = mutableMapOf<String, Double>()
     private val dateFormatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.getDefault())
+    
+    // Coroutine scope for background analytics calls to avoid blocking scrolling performance
+    private val analyticsScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     
     fun checkVisibilityAndTrack(
         recyclerView: RecyclerView,
@@ -46,23 +53,25 @@ class VisibilityAnalytics {
         val timestamp = System.currentTimeMillis()
         val formattedTime = dateFormatter.format(Date(timestamp))
         
-        YandexAnalytics.getInstance().trackEvent(
-            "product_visibility_scroll",
-            mapOf(
-                "product_id" to product.id,
-                "product_title" to product.title,
-                "product_price" to product.currentPrice,
-                "product_seller" to product.seller,
-                "position" to position,
-                "timestamp" to formattedTime,
-                "has_discount" to product.hasDiscount,
-                "image_count" to product.imageUrls.size,
-                "price_length" to product.currentPrice.length,
-                "title_words" to product.title.split(" ").size,
-                "cache_size" to analyticsCache.size,
-                "tracked_count" to currentlyVisibleProducts.size
+        analyticsScope.launch {
+            YandexAnalytics.getInstance().trackEvent(
+                "product_visibility_scroll",
+                mapOf(
+                    "product_id" to product.id,
+                    "product_title" to product.title,
+                    "product_price" to product.currentPrice,
+                    "product_seller" to product.seller,
+                    "position" to position,
+                    "timestamp" to formattedTime,
+                    "has_discount" to product.hasDiscount,
+                    "image_count" to product.imageUrls.size,
+                    "price_length" to product.currentPrice.length,
+                    "title_words" to product.title.split(" ").size,
+                    "cache_size" to analyticsCache.size,
+                    "tracked_count" to currentlyVisibleProducts.size
+                )
             )
-        )
+        }
     }
     
     fun reset() {

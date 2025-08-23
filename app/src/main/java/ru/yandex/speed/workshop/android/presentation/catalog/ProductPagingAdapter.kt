@@ -9,6 +9,10 @@ import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.yandex.analytics.api.YandexAnalytics
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import ru.yandex.speed.workshop.android.R
 import ru.yandex.speed.workshop.android.domain.models.Product
 import ru.yandex.speed.workshop.android.utils.ImageLoader
@@ -18,6 +22,9 @@ class ProductPagingAdapter(
     private val isFavorite: (String) -> Boolean,
     private val imageLoader: ImageLoader,
 ) : PagingDataAdapter<Product, ProductPagingAdapter.ProductViewHolder>(Diff) {
+    
+    private val analyticsScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    
     companion object {
         const val VIEW_TYPE_PRODUCT = 0
     }
@@ -83,15 +90,16 @@ class ProductPagingAdapter(
             updateFavoriteIcon(product.id, favoriteImageView)
 
             itemView.setOnClickListener {
-                // Аналитика при клике на товар
-                YandexAnalytics.getInstance().trackEvent(
-                    "product_click_from_list",
-                    mapOf(
-                        "product_id" to product.id,
-                        "product_title" to product.title,
-                        "position" to bindingAdapterPosition,
-                    ),
-                )
+                analyticsScope.launch {
+                    YandexAnalytics.getInstance().trackEvent(
+                        "product_click_from_list",
+                        mapOf(
+                            "product_id" to product.id,
+                            "product_title" to product.title,
+                            "position" to bindingAdapterPosition,
+                        ),
+                    )
+                }
                 onProductClick(product)
             }
             favoriteImageView.setOnClickListener {
