@@ -1,5 +1,6 @@
 package ru.yandex.speed.workshop.android.presentation.catalog
 
+import android.content.res.ColorStateList
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
@@ -22,9 +23,9 @@ class ProductPagingAdapter(
     private val isFavorite: (String) -> Boolean,
     private val imageLoader: ImageLoader,
 ) : PagingDataAdapter<Product, ProductPagingAdapter.ProductViewHolder>(Diff) {
-    
+
     private val analyticsScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    
+
     companion object {
         const val VIEW_TYPE_PRODUCT = 0
     }
@@ -66,8 +67,17 @@ class ProductPagingAdapter(
     inner class ProductViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val productImageView: ImageView = itemView.findViewById(R.id.productImageView)
         private val favoriteImageView: ImageView = itemView.findViewById(R.id.favoriteImageView)
-        private val productTitleTextView: TextView = itemView.findViewById(R.id.productTitleTextView)
-        private val productPriceTextView: TextView = itemView.findViewById(R.id.productPriceTextView)
+        private val productTitleTextView: TextView =
+            itemView.findViewById(R.id.productTitleTextView)
+        private val productPriceTextView: TextView =
+            itemView.findViewById(R.id.productPriceTextView)
+
+        private val colorFav = ColorStateList.valueOf(
+            ContextCompat.getColor(itemView.context, android.R.color.holo_red_dark)
+        )
+        private val colorNotFav = ColorStateList.valueOf(
+            ContextCompat.getColor(itemView.context, android.R.color.darker_gray)
+        )
 
         fun bind(product: Product) {
             val spacing = itemView.resources.getDimensionPixelSize(R.dimen.catalog_grid_spacing)
@@ -113,12 +123,8 @@ class ProductPagingAdapter(
         ) {
             val isFav = isFavorite(productId)
             val favoriteIcon = if (isFav) R.drawable.ic_heart_filled else R.drawable.ic_heart
-            favoriteImageView.setImageDrawable(ContextCompat.getDrawable(itemView.context, favoriteIcon))
-            val favoriteColor = if (isFav) android.R.color.holo_red_dark else android.R.color.darker_gray
-            favoriteImageView.imageTintList =
-                android.content.res.ColorStateList.valueOf(
-                    itemView.context.getColor(favoriteColor),
-                )
+            favoriteImageView.setImageResource(favoriteIcon)
+            favoriteImageView.imageTintList = if (isFav) colorFav else colorNotFav
         }
 
     }
