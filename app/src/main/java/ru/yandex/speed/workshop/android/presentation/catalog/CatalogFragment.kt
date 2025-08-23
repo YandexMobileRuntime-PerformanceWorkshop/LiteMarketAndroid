@@ -167,23 +167,7 @@ class CatalogFragment : Fragment() {
 
     private fun setupRecyclerView() {
         val spacing = resources.getDimensionPixelSize(R.dimen.catalog_grid_spacing)
-        val gridLayoutManager = object : GridLayoutManager(requireContext(), 2) {
-
-            /**
-             * Применение стратегии проактивного рендеринга, заключающейся в упреждающей композиции
-             * графических элементов за пределами текущей области видимости для обеспечения
-             * бесшовности визуального потока и нивелирования артефактов отрисовки
-             */
-            override fun calculateExtraLayoutSpace(
-                state: RecyclerView.State,
-                extraLayoutSpace: IntArray
-            ) {
-                super.calculateExtraLayoutSpace(state, extraLayoutSpace)
-                extraLayoutSpace.indices.forEach {
-                    extraLayoutSpace[it] += resources.displayMetrics.heightPixels
-                }
-            }
-        }
+        val gridLayoutManager = GridLayoutManager(requireContext(), 2)
 
         // Настраиваем отображение элементов загрузки на всю ширину
         gridLayoutManager.spanSizeLookup =
