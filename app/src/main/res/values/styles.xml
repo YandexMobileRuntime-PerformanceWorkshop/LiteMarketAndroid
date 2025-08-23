@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    
+    <!-- Product card style - iOS like -->
+    <style name="ProductCardStyle">
+        <item name="android:layout_margin">@dimen/product_card_margin</item>
+        <item name="cardCornerRadius">@dimen/product_card_radius</item>
+        <item name="cardElevation">@dimen/product_card_elevation</item>
+        <item name="cardBackgroundColor">@android:color/white</item>
+    </style>
+    
+    <!-- Product title style -->
+    <style name="ProductTitleStyle">
+        <item name="android:textSize">@dimen/text_size_product_title</item>
+        <item name="android:textColor">#FF212121</item>
+        <item name="android:maxLines">2</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:lineSpacingMultiplier">1.1</item>
+    </style>
+    
+    <!-- Product price style -->
+    <style name="ProductPriceStyle">
+        <item name="android:textSize">@dimen/text_size_product_price</item>
+        <item name="android:textColor">@color/product_price_color</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    
+    <!-- Category button style -->
+    <style name="CategoryButtonStyle">
+        <item name="android:layout_height">@dimen/category_height</item>
+        <item name="android:layout_marginEnd">@dimen/category_margin_end</item>
+        <item name="android:background">@drawable/category_button_background</item>
+        <item name="android:paddingStart">@dimen/category_padding_horizontal</item>
+        <item name="android:paddingEnd">@dimen/category_padding_horizontal</item>
+        <item name="android:textColor">@color/category_button_text_color</item>
+        <item name="android:textSize">@dimen/text_size_category</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+    
+</resources> 

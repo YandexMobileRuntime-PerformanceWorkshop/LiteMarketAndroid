@@ -1,0 +1,103 @@
+name: Android CI
+
+on:
+  push:
+    branches: [ main, good_perf ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+      
+    - name: Build with Gradle
+      run: ./gradlew build
+      
+    - name: Build Release APK
+      run: ./gradlew assembleRelease
+      
+    - name: Sign APK with Debug Keystore
+      run: |
+        if [ ! -f ~/.android/debug.keystore ]; then
+          mkdir -p ~/.android
+          keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+        fi
+        APKSIGNER=$(find $ANDROID_HOME/build-tools -name "apksigner" | head -1)
+        "$APKSIGNER" sign --ks ~/.android/debug.keystore --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
+        
+    - name: Generate Version Info
+      id: version
+      run: |
+        BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD || echo "unknown")
+        BUILD_NUMBER=$(git rev-list --count HEAD)
+        COMMIT_HASH=$(git rev-parse --short HEAD)
+        
+        if [ "$BRANCH_NAME" = "main" ]; then
+          APK_NAME="SpeedWorkshop-v1.0.${BUILD_NUMBER}.apk"
+        else
+          APK_NAME="SpeedWorkshop-v1.0.${BUILD_NUMBER}-${BRANCH_NAME}.apk"
+        fi
+        
+        cp app/build/outputs/apk/release/app-release.apk $APK_NAME
+        
+        echo "apk_name=$APK_NAME" >> $GITHUB_OUTPUT
+        echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
+        echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+        echo "commit_hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
+        
+    - name: Upload APK as Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: SpeedWorkshop-${{ steps.version.outputs.branch }}-build
+        path: ${{ steps.version.outputs.apk_name }}
+        retention-days: 14
+        
+    - name: Build Summary
+      run: |
+        echo "=================================="
+        echo "BUILD COMPLETED SUCCESSFULLY!"
+        echo "=================================="
+        echo ""
+        echo "App: Speed Workshop Android"
+        echo "Branch: ${{ steps.version.outputs.branch }}"
+        echo "Build: ${{ steps.version.outputs.build_number }}"
+        echo "Commit: ${{ steps.version.outputs.commit_hash }}"
+        echo "APK: ${{ steps.version.outputs.apk_name }}"
+        echo ""
+        echo "APK is available as an artifact in GitHub Actions"
+        echo "=================================="
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+      
+    - name: Run tests
+      run: ./gradlew test
