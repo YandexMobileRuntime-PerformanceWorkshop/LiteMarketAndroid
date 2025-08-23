@@ -57,10 +57,10 @@ class ProductPagingAdapter(
     }
 
     inner class ProductViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val productImageView: ImageView get() = itemView.findViewById(R.id.productImageView)
-        private val favoriteImageView: ImageView get() = itemView.findViewById(R.id.favoriteImageView)
-        private val productTitleTextView: TextView get() = itemView.findViewById(R.id.productTitleTextView)
-        private val productPriceTextView: TextView get() = itemView.findViewById(R.id.productPriceTextView)
+        private val productImageView: ImageView = itemView.findViewById(R.id.productImageView)
+        private val favoriteImageView: ImageView = itemView.findViewById(R.id.favoriteImageView)
+        private val productTitleTextView: TextView = itemView.findViewById(R.id.productTitleTextView)
+        private val productPriceTextView: TextView = itemView.findViewById(R.id.productPriceTextView)
 
         fun bind(product: Product) {
             val spacing = itemView.resources.getDimensionPixelSize(R.dimen.catalog_grid_spacing)
